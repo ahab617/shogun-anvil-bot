@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import setlog from "../utils/setlog";
 
 export const connectDatabase = async (mongoUrl: string) => {
   try {
@@ -10,9 +9,9 @@ export const connectDatabase = async (mongoUrl: string) => {
     mongoose.set("strictQuery", true);
     const result = await mongoose.connect(mongoUrl, options);
     if (result) {
-      setlog("MongoDB connected");
+      console.log("MongoDB connected");
     }
   } catch (err) {
-    setlog("ConnectDatabase", err);
+    console.log("MongoDB connect failed: ", err);
   }
 };
