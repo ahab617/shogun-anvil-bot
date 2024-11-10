@@ -47,7 +47,7 @@ export const apiSwap = async (
   walletPrivateKey: string
 ) => {
   try {
-    const privateKey = await decryptPrivateKey(walletPrivateKey);
+    const privateKey = (await decryptPrivateKey(walletPrivateKey)) as string;
 
     const owner: Keypair = Keypair.fromSecretKey(
       Buffer.from(privateKey, "base64")
@@ -65,12 +65,12 @@ export const apiSwap = async (
       inputMint === NATIVE_MINT.toBase58(),
       outputMint === NATIVE_MINT.toBase58(),
     ];
-    const { tokenAccounts } = await fetchTokenAccountData(owner);
+    const { tokenAccounts } = (await fetchTokenAccountData(owner)) as any;
     const inputTokenAcc = tokenAccounts.find(
-      (a) => a.mint.toBase58() === inputMint
+      (a: any) => a.mint.toBase58() === inputMint
     )?.publicKey;
     const outputTokenAcc = tokenAccounts.find(
-      (a) => a.mint.toBase58() === outputMint
+      (a: any) => a.mint.toBase58() === outputMint
     )?.publicKey;
 
     if (!inputTokenAcc && !isInputSol) {

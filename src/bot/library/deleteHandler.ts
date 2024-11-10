@@ -5,12 +5,12 @@ import tokenSettingController from "../../controller/tokenSetting";
 
 export const deleteWallethandler = async (msg: any) => {
   try {
-    bot.editMessageReplyMarkup(
+    await bot.editMessageReplyMarkup(
       { inline_keyboard: [] },
       { chat_id: msg.chat.id, message_id: msg.message_id }
     );
 
-    bot.sendMessage(
+    await bot.sendMessage(
       msg.chat.id,
       `
   Would you like to reset your wallet?
@@ -29,7 +29,7 @@ export const deleteWallethandler = async (msg: any) => {
       }
     );
   } catch (error) {
-    console.error("Error handling reset wallet message:", error);
+    console.log("Error handling reset wallet message:", error);
   }
 };
 
@@ -41,39 +41,42 @@ export const confirmHandler = async (msg: any) => {
       },
     });
 
-    bot.sendMessage(msg.chat.id, `✅ Reset is successfully completed.`);
+    await bot.sendMessage(msg.chat.id, `✅ Reset is successfully completed.`);
 
-    startHandler(msg);
+    await startHandler(msg);
   } catch (error) {
-    console.error("Error during wallet reset:", error);
+    console.log("Error during wallet reset:", error);
   }
 };
 
 export const deleteTokenHandler = async (msg: any) => {
-  bot.editMessageReplyMarkup(
-    { inline_keyboard: [] },
-    { chat_id: msg.chat.id, message_id: msg.message_id }
-  );
-  bot.sendMessage(msg.chat.id, `Would you like to delete your token?`, {
-    parse_mode: "HTML",
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: "Cancel  👈", callback_data: "return" },
-          { text: "OK  ✔️", callback_data: "agree_delete_token" },
+  try {
+    await bot.editMessageReplyMarkup(
+      { inline_keyboard: [] },
+      { chat_id: msg.chat.id, message_id: msg.message_id }
+    );
+    await bot.sendMessage(msg.chat.id, `Would you like to delete your token?`, {
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: "Cancel  👈", callback_data: "return" },
+            { text: "OK  ✔️", callback_data: "agree_delete_token" },
+          ],
         ],
-      ],
-    },
-  });
+      },
+    });
+  } catch (error) {
+    console.log("deleteTokenHandlerError:", error);
+  }
 };
 
 export const confirmTokenHandler = async (msg: any) => {
-  bot.editMessageReplyMarkup(
-    { inline_keyboard: [] },
-    { chat_id: msg.chat.id, message_id: msg.message_id }
-  );
-
   try {
+    await bot.editMessageReplyMarkup(
+      { inline_keyboard: [] },
+      { chat_id: msg.chat.id, message_id: msg.message_id }
+    );
     const r = await tokenSettingController.deleteOne({
       filter: { userId: msg.chat.id },
     });
@@ -83,18 +86,8 @@ export const confirmTokenHandler = async (msg: any) => {
       startHandler(msg);
     } else if (r?.status === 202) {
       bot.sendMessage(msg.chat.id, `⚠️ Reset failed. Please try again.`);
-    } else if (r?.status === 500) {
-      bot.sendMessage(
-        msg.chat.id,
-        `⚠️ An error has occurred on the server. Please try again later.`
-      );
-    } else {
-      bot.sendMessage(
-        msg.chat.id,
-        `Unexpected response received. Please contact support.`
-      );
     }
   } catch (error) {
-    console.error("Error during reset:", error);
+    console.log("confirmTokenHandlerError:", error);
   }
 };

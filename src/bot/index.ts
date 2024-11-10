@@ -96,27 +96,6 @@ export class Commands {
   fn: Function;
   cb: Function;
 }
-export class Events {
-  constructor(event: string, fn: Function, cb: Function) {
-    this.event = event;
-    this.fn = fn;
-    this.cb = cb;
-  }
-
-  event: string;
-  fn: Function;
-  cb: Function;
-}
-export function getCmd(text: string) {
-  const cmd = text.split(" ");
-  const result = [];
-  for (let i = 0; i < cmd.length; i++) {
-    if (cmd[i] != " " && cmd[i] != "") {
-      result.push(cmd[i]);
-    }
-  }
-  return result;
-}
 
 export const initBot = () => {
   loadCommands();

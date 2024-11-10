@@ -5,7 +5,7 @@ const find = async () => {
     const result = await AdminList.find();
     return result;
   } catch (error) {
-    throw new Error("Failed to find deposit");
+    throw new Error("Failed to find adminList");
   }
 };
 
@@ -26,7 +26,7 @@ const create = async (data: any) => {
       }
     }
   } catch (error) {
-    return { status: 500, msg: "Internal server error" };
+    throw new Error("Failed to create adminList");
   }
 };
 const deleteOne = async (props: any) => {
@@ -34,9 +34,8 @@ const deleteOne = async (props: any) => {
     const { filter } = props;
     const result = await AdminList.deleteOne(filter);
     return result;
-  } catch (err) {
-    console.error("Error admin delete: ", err);
-    return null;
+  } catch (error) {
+    throw new Error("Failed to delete adminList");
   }
 };
 

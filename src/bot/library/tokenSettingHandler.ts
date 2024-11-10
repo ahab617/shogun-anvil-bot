@@ -19,7 +19,7 @@ export let tokenInfo: TtokenInfo | null;
 
 export const tokenSettingHandler = async (msg: any) => {
   try {
-    removeAnswerCallback(msg.chat);
+    await removeAnswerCallback(msg.chat);
     timeline = 0;
     tokenInfo = null;
     const user = await tokenController.findOne({
@@ -41,12 +41,12 @@ export const tokenSettingHandler = async (msg: any) => {
           "/activity",
         ].includes(msg.text)
       ) {
-        bot.editMessageReplyMarkup(
+        await bot.editMessageReplyMarkup(
           { inline_keyboard: [] },
           { chat_id: msg.chat.id, message_id: msg.message_id }
         );
       }
-      bot
+      await bot
         .sendMessage(
           msg.chat.id,
           `
@@ -58,8 +58,8 @@ export const tokenSettingHandler = async (msg: any) => {
             },
           }
         )
-        .then((sentMessage) => {
-          bot.onReplyToMessage(
+        .then(async (sentMessage) => {
+          await bot.onReplyToMessage(
             sentMessage.chat.id,
             sentMessage.message_id,
             async (reply) => {
@@ -79,11 +79,11 @@ export const tokenSettingHandler = async (msg: any) => {
               ) {
                 return;
               }
-              tokenInfo = await isValidSolanaToken(tokenAddress, msg);
+              tokenInfo = (await isValidSolanaToken(tokenAddress, msg)) as any;
               if (tokenInfo) {
                 const r = await tokenController.create(tokenInfo);
                 if (r) {
-                  bot.sendMessage(
+                  await bot.sendMessage(
                     msg.chat.id,
                     `Setting is completed successfully .
   
@@ -110,24 +110,6 @@ export const tokenSettingHandler = async (msg: any) => {
                       },
                     }
                   );
-                } else {
-                  bot.sendMessage(
-                    msg.chat.id,
-                    `An error has occurred on the server. Please try again later.`,
-                    {
-                      parse_mode: "HTML",
-                      reply_markup: {
-                        inline_keyboard: [
-                          [
-                            {
-                              text: "Return 👈",
-                              callback_data: "return",
-                            },
-                          ],
-                        ],
-                      },
-                    }
-                  );
                 }
               } else {
                 await promptForTokenAddress(msg);
@@ -141,14 +123,14 @@ export const tokenSettingHandler = async (msg: any) => {
       if (response?.status == 200 && response?.data?.pairs) {
         marketCap = response.data.pairs[0].marketCap;
       } else {
-        bot.sendMessage(
+        await bot.sendMessage(
           msg.chat.id,
           `API request failed. Please try again.`,
           {}
         );
         return;
       }
-      bot.sendMessage(
+      await bot.sendMessage(
         msg.chat.id,
         `
   ✅ Token is valid.
@@ -183,127 +165,117 @@ export const tokenSettingHandler = async (msg: any) => {
 };
 
 const isValidSolanaToken = async (tokenAddress: string | any, msg: any) => {
-  const response = await axios(`${config.dexAPI}/${tokenAddress}`);
-  if (response?.status == 200 && response?.data?.pairs) {
-    let data = response.data.pairs;
-    const info = await connection.getParsedAccountInfo(
-      new PublicKey(tokenAddress)
-    );
-    const decimal = info?.value?.data?.parsed?.info?.decimals;
-    let pairInfo = [];
-    for (let i = 0; i < data.length; i++) {
-      if (
-        data[i].dexId === "raydium" &&
-        data[i].baseToken.address === tokenAddress
-      ) {
-        pairInfo.push({
-          inToken: data[i].quoteToken.address,
-          inName: data[i].quoteToken.name,
-          inSymbol: data[i].quoteToken.symbol,
-          inLiquidity: data[i].liquidity.quote,
-          outLiquidity: data[i].liquidity.base,
-          pairAddress: data[i].pairAddress,
-        });
+  try {
+    const response = await axios(`${config.dexAPI}/${tokenAddress}`);
+    if (response?.status == 200 && response?.data?.pairs) {
+      let data = response.data.pairs;
+      const info = await connection.getParsedAccountInfo(
+        new PublicKey(tokenAddress)
+      );
+      const decimal = info?.value?.data?.parsed?.info?.decimals;
+      let pairInfo = [];
+      for (let i = 0; i < data.length; i++) {
+        if (
+          data[i].dexId === "raydium" &&
+          data[i].baseToken.address === tokenAddress
+        ) {
+          pairInfo.push({
+            inToken: data[i].quoteToken.address,
+            inName: data[i].quoteToken.name,
+            inSymbol: data[i].quoteToken.symbol,
+            inLiquidity: data[i].liquidity.quote,
+            outLiquidity: data[i].liquidity.base,
+            pairAddress: data[i].pairAddress,
+          });
+        }
       }
+      const tokenInfo = {
+        userId: msg.chat.id,
+        name: response.data.pairs[0].baseToken.name,
+        symbol: response.data.pairs[0].baseToken.symbol,
+        pairInfo: pairInfo,
+        decimal: decimal,
+        publicKey: tokenAddress,
+      } as TtokenInfo;
+      return tokenInfo;
+    } else {
+      return null;
     }
-    const tokenInfo = {
-      userId: msg.chat.id,
-      name: response.data.pairs[0].baseToken.name,
-      symbol: response.data.pairs[0].baseToken.symbol,
-      pairInfo: pairInfo,
-      decimal: decimal,
-      publicKey: tokenAddress,
-    } as TtokenInfo;
-    return tokenInfo;
-  } else {
-    return null;
+  } catch (error) {
+    console.log("isValidSolanaTokenError: ", error);
   }
 };
 
 const promptForTokenAddress = async (msg: any) => {
-  bot
-    .sendMessage(
-      msg.chat.id,
-      `
+  try {
+    await bot
+      .sendMessage(
+        msg.chat.id,
+        `
 <b>Please the valid token address.</b>`,
-      {
-        parse_mode: "HTML",
-        reply_markup: {
-          force_reply: true,
-        },
-      }
-    )
-    .then((sentMessage) => {
-      bot.onReplyToMessage(
-        sentMessage.chat.id,
-        sentMessage.message_id,
-        async (reply) => {
-          const tokenAddress = reply.text?.trim() as string;
-          if (
-            [
-              "/cancel",
-              "/support",
-              "/start",
-              "/wallet",
-              "/token",
-              "/deposit",
-              "/withdraw",
-              "/balance",
-              "/activity",
-            ].includes(tokenAddress)
-          ) {
-            return;
-          }
-          const tokenInfo = await isValidSolanaToken(tokenAddress, msg);
-          if (tokenInfo) {
-            const r = await tokenController.create(tokenInfo);
-            if (r) {
-              bot.sendMessage(
-                msg.chat.id,
-                `Setting is completed successfully.
+        {
+          parse_mode: "HTML",
+          reply_markup: {
+            force_reply: true,
+          },
+        }
+      )
+      .then(async (sentMessage) => {
+        await bot.onReplyToMessage(
+          sentMessage.chat.id,
+          sentMessage.message_id,
+          async (reply) => {
+            const tokenAddress = reply.text?.trim() as string;
+            if (
+              [
+                "/cancel",
+                "/support",
+                "/start",
+                "/wallet",
+                "/token",
+                "/deposit",
+                "/withdraw",
+                "/balance",
+                "/activity",
+              ].includes(tokenAddress)
+            ) {
+              return;
+            }
+            const tokenInfo = await isValidSolanaToken(tokenAddress, msg);
+            if (tokenInfo) {
+              const r = await tokenController.create(tokenInfo);
+              if (r) {
+                await bot.sendMessage(
+                  msg.chat.id,
+                  `Setting is completed successfully.
 
 🟣 <b>Token Address: </b> <code>${tokenInfo.publicKey}</code>
 
 🟢 <b>Token Name: </b> ${tokenInfo.name}
 
 🟠 <b>Token Symbol: </b> ${tokenInfo.symbol}`,
-                {
-                  parse_mode: "HTML",
-                  reply_markup: {
-                    inline_keyboard: [
-                      [
-                        {
-                          text: "Return 👈",
-                          callback_data: "return",
-                        },
+                  {
+                    parse_mode: "HTML",
+                    reply_markup: {
+                      inline_keyboard: [
+                        [
+                          {
+                            text: "Return 👈",
+                            callback_data: "return",
+                          },
+                        ],
                       ],
-                    ],
-                  },
-                }
-              );
+                    },
+                  }
+                );
+              }
             } else {
-              bot.sendMessage(
-                msg.chat.id,
-                `An error has occurred on the server. Please try again later.`,
-                {
-                  parse_mode: "HTML",
-                  reply_markup: {
-                    inline_keyboard: [
-                      [
-                        {
-                          text: "Return 👈",
-                          callback_data: "return",
-                        },
-                      ],
-                    ],
-                  },
-                }
-              );
+              return promptForTokenAddress(msg);
             }
-          } else {
-            return promptForTokenAddress(msg);
           }
-        }
-      );
-    });
+        );
+      });
+  } catch (error) {
+    console.log("promptForTokenAddress: ", error);
+  }
 };

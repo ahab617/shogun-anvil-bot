@@ -8,6 +8,14 @@ import depositController from "../controller/deposit";
 import config from "../config.json";
 const cron = require("node-cron");
 let timeAmount = 0;
+
+export const startSwapProcess = async () => {
+  timeAmount = 0;
+  cron.schedule("*/1 * * * *", () => {
+    processSwap(1);
+  });
+};
+
 const executeSwap = async (userList: any) => {
   const {
     amount,
@@ -29,9 +37,9 @@ const executeSwap = async (userList: any) => {
   try {
     if (buyProgress < buy && flag) {
       if (baseToken === config.solTokenAddress) {
-        const currentSolBalance = await checkSolBalance(
+        const currentSolBalance = (await checkSolBalance(
           swapDetails[0].publicKey
-        );
+        )) as number;
         if (currentSolBalance >= amount + config.networkFee) {
           const result = await apiSwap(
             Number(amount),
@@ -89,10 +97,10 @@ Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
           }
         }
       } else {
-        const currentTokenBalance = await checkSplTokenBalance(
+        const currentTokenBalance = (await checkSplTokenBalance(
           baseToken,
           swapDetails[0].publicKey
-        );
+        )) as number;
 
         if (currentTokenBalance >= amount) {
           const result = await apiSwap(
@@ -222,9 +230,11 @@ Reverse swap for ${Number(
 const processSwapForUserList = async (userList: any) => {
   const { swapDetails, userId } = userList;
   try {
-    const currentBalance = await checkSolBalance(swapDetails[0].publicKey);
+    const currentBalance = (await checkSolBalance(
+      swapDetails[0].publicKey
+    )) as number;
     if (currentBalance < config.networkFee) {
-      bot.sendMessage(
+      await bot.sendMessage(
         userId,
         `
 You have not the native token enough.
@@ -243,16 +253,19 @@ You have not the native token enough.
         }
       );
 
-      bot.on("callback_query", async function onCallbackQuery(callbackQuery) {
-        const action = callbackQuery.data;
-        if (action?.startsWith("deposit_Sol")) {
-          await depositSolHandler(
-            callbackQuery.message,
-            config.networkFee,
-            swapDetails[0].publicKey
-          );
+      await bot.on(
+        "callback_query",
+        async function onCallbackQuery(callbackQuery) {
+          const action = callbackQuery.data;
+          if (action?.startsWith("deposit_Sol")) {
+            await depositSolHandler(
+              callbackQuery.message,
+              config.networkFee,
+              swapDetails[0].publicKey
+            );
+          }
         }
-      });
+      );
       return;
     }
     await executeSwap(userList);
@@ -285,19 +298,14 @@ const processSwap = async (interval: number) => {
     console.error("Error fetching swap info:", error);
   }
 };
-export const startSwapProcess = async () => {
-  timeAmount = 0;
-  cron.schedule("*/1 * * * *", () => {
-    processSwap(1);
-  });
-};
+
 const inputTokenCheck = async (
   userId: number,
   tokenAddress: any,
   Symbol: string,
   miniAmount: number
 ) => {
-  bot.sendMessage(
+  await bot.sendMessage(
     userId,
     `
 You have not the ${Symbol} token amount enough.

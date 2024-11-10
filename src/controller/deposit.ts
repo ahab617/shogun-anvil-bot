@@ -61,7 +61,7 @@ const create = async (tokenInfo: any) => {
       }
     }
   } catch (error) {
-    return { status: 500, message: "Internal server error" };
+    throw new Error("Failed to create deposit");
   }
 };
 

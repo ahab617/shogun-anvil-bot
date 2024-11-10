@@ -4,8 +4,12 @@ import config from "./config.json";
 import { startSwapProcess } from "./swap";
 
 async function start() {
-  await connectDatabase(config.database);
-  initBot();
-  startSwapProcess();
+  try {
+    await connectDatabase(config.database);
+    await initBot();
+    await startSwapProcess();
+  } catch (error) {
+    console.log("Bot Start Error: ", error);
+  }
 }
 start();

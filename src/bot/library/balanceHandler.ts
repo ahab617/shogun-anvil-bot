@@ -12,9 +12,8 @@ let tokenAccount = "" as any;
 
 export const balanceHandler = async (msg: any) => {
   try {
-    removeAnswerCallback(msg.chat);
+    await removeAnswerCallback(msg.chat);
     tokenAccount = "";
-
     const user = await walletController.findOne({
       filter: {
         userId: msg.chat.id,
@@ -55,7 +54,7 @@ export const balanceHandler = async (msg: any) => {
                 }
               }
             } catch (error) {
-              console.error("Error fetching token information:", error);
+              console.log("Error fetching token information:", error);
             }
           }
 
@@ -74,23 +73,27 @@ export const balanceHandler = async (msg: any) => {
               "/activity",
             ].includes(msg.text)
           ) {
-            bot.editMessageReplyMarkup(
+            await bot.editMessageReplyMarkup(
               { inline_keyboard: [] },
               { chat_id: msg.chat.id, message_id: msg.message_id }
             );
           }
 
-          bot.sendMessage(msg.chat.id, `Please add tokens to your wallet.`, {
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "Return 👈", callback_data: "return" }],
-              ],
-            },
-          });
+          await bot.sendMessage(
+            msg.chat.id,
+            `Please add tokens to your wallet.`,
+            {
+              parse_mode: "HTML",
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "Return 👈", callback_data: "return" }],
+                ],
+              },
+            }
+          );
         }
       } catch (error) {
-        console.error("Error accessing deposit information:", error);
+        console.log("Error accessing deposit information:", error);
       }
     } else {
       if (
@@ -106,13 +109,13 @@ export const balanceHandler = async (msg: any) => {
           "/activity",
         ].includes(msg.text)
       ) {
-        bot.editMessageReplyMarkup(
+        await bot.editMessageReplyMarkup(
           { inline_keyboard: [] },
           { chat_id: msg.chat.id, message_id: msg.message_id }
         );
       }
 
-      bot.sendMessage(msg.chat.id, `Connect your wallet to continue.`, {
+      await bot.sendMessage(msg.chat.id, `Connect your wallet to continue.`, {
         parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [[{ text: "Return 👈", callback_data: "return" }]],
@@ -120,13 +123,13 @@ export const balanceHandler = async (msg: any) => {
       });
     }
   } catch (error) {
-    console.error("Unexpected error:", error);
+    console.log("Unexpected error:", error);
   }
 };
 
 const balanceModal = async (msg: any) => {
   try {
-    bot.sendMessage(
+    await bot.sendMessage(
       msg.chat.id,
       `
 <b>Here is your current wallet balance:</b> 
@@ -139,7 +142,7 @@ ${tokenAccount}`,
       }
     );
   } catch (error) {
-    console.error("Error sending wallet balance message:", error);
+    console.log("Error sending wallet balance message:", error);
   }
 };
 
@@ -158,7 +161,7 @@ const getTokenInfo = async (tokenAddress: string) => {
       return null;
     }
   } catch (err) {
-    console.error("getTokenInfo in balanceHandler: ", err);
+    console.log("getTokenInfo in balanceHandler: ", err);
     return null;
   }
 };

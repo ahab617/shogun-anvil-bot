@@ -12,7 +12,7 @@ const create = async (data: any) => {
       return userCount + 1;
     }
   } catch (error) {
-    return { status: 500, msg: "Internal server error" };
+    throw new Error("Failed to create userListInfo");
   }
 };
 

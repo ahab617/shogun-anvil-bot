@@ -13,10 +13,7 @@ const findOne = async (props: any) => {
       };
     }
   } catch (error) {
-    return {
-      status: 500,
-      message: "Internal server error. Please try again a later.",
-    };
+    throw new Error("Failed to find swapInfo");
   }
 };
 
@@ -34,7 +31,7 @@ const swapInfo = async () => {
     ]);
     return { status: 200, data: result };
   } catch (error) {
-    return { status: 500, message: "Internal server error" };
+    throw new Error("Failed to find swapInfo");
   }
 };
 
@@ -48,11 +45,9 @@ const create = async (tokenInfo: any) => {
         message: "Swap created successfully",
         data: newSwapSave,
       };
-    } else {
-      return { status: 500, message: "Failed to save new swap" };
     }
   } catch (error) {
-    return { status: 500, message: "Internal server error" };
+    throw new Error("Failed to create swapInfo");
   }
 };
 
@@ -73,14 +68,18 @@ const updateOne = async (props: any) => {
       return { status: 404, message: "Swap not found" };
     }
   } catch (error) {
-    return { status: 500, message: "Internal server error" };
+    throw new Error("Failed to update swapInfo");
   }
 };
 
 const deleteOne = async (props: any) => {
-  const { filter } = props;
-  const result = await Swap.deleteOne(filter);
-  return result;
+  try {
+    const { filter } = props;
+    const result = await Swap.deleteOne(filter);
+    return result;
+  } catch (error) {
+    throw new Error("Failed to delete swapInfo");
+  }
 };
 
 export default {

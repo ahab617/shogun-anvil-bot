@@ -6,22 +6,26 @@ export const connection = new Connection(config.rpcUrl);
 export const txVersion = TxVersion.V0; // or TxVersion.LEGACY
 
 export const fetchTokenAccountData = async (owner: Keypair) => {
-  const solAccountResp = await connection.getAccountInfo(owner.publicKey);
-  const tokenAccountResp = await connection.getTokenAccountsByOwner(
-    owner.publicKey,
-    { programId: TOKEN_PROGRAM_ID }
-  );
-  const token2022Req = await connection.getTokenAccountsByOwner(
-    owner.publicKey,
-    { programId: TOKEN_2022_PROGRAM_ID }
-  );
-  const tokenAccountData = parseTokenAccountResp({
-    owner: owner.publicKey,
-    solAccountResp,
-    tokenAccountResp: {
-      context: tokenAccountResp.context,
-      value: [...tokenAccountResp.value, ...token2022Req.value],
-    },
-  });
-  return tokenAccountData;
+  try {
+    const solAccountResp = await connection.getAccountInfo(owner.publicKey);
+    const tokenAccountResp = await connection.getTokenAccountsByOwner(
+      owner.publicKey,
+      { programId: TOKEN_PROGRAM_ID }
+    );
+    const token2022Req = await connection.getTokenAccountsByOwner(
+      owner.publicKey,
+      { programId: TOKEN_2022_PROGRAM_ID }
+    );
+    const tokenAccountData = await parseTokenAccountResp({
+      owner: owner.publicKey,
+      solAccountResp,
+      tokenAccountResp: {
+        context: tokenAccountResp.context,
+        value: [...tokenAccountResp.value, ...token2022Req.value],
+      },
+    });
+    return tokenAccountData;
+  } catch (error) {
+    console.log("fetchTokenAccountDataError: ", error);
+  }
 };

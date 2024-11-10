@@ -11,10 +11,10 @@ export default new Commands(
     const fromId = msg.from.id;
     const chatId = msg.chat.id;
     if (fromId != chatId) {
-      bot.sendMessage(msg.chat.id, `No permission`, {});
+      await bot.sendMessage(msg.chat.id, `No permission`, {});
       return;
     }
-    removeAnswerCallback(msg.chat);
+    await removeAnswerCallback(msg.chat);
     await sendMessage(
       msg.chat.id,
       `<b>All active commands have been canceled.</b>`

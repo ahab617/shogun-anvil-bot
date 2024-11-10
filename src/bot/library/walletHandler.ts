@@ -6,7 +6,7 @@ const solanaWeb3 = require("@solana/web3.js");
 
 export const walletHandler = async (msg: any) => {
   try {
-    removeAnswerCallback(msg.chat);
+    await removeAnswerCallback(msg.chat);
     const user = await walletController.findOne({
       filter: {
         userId: msg.chat.id,
@@ -38,19 +38,19 @@ export const walletHandler = async (msg: any) => {
             "/activity",
           ].includes(msg.text)
         ) {
-          bot.editMessageReplyMarkup(
+          await bot.editMessageReplyMarkup(
             { inline_keyboard: [] },
             { chat_id: msg.chat.id, message_id: msg.message_id }
           );
         }
-        bot.sendMessage(
+        await bot.sendMessage(
           msg.chat.id,
           `
-  <b>Your Temper Wallet is connected</b>
-  ${publicKey}
-  
-  <b>You can deposit to this wallet by using this.</b>
-  Command line:   /deposit
+<b>Your Anvil Wallet is connected</b>
+${publicKey}
+
+<b>You can deposit to this wallet by using this.</b>
+Command line:   /deposit
           `,
           {
             parse_mode: "HTML",
@@ -63,40 +63,6 @@ export const walletHandler = async (msg: any) => {
                     callback_data: "delete_wallet",
                   },
                 ],
-              ],
-            },
-          }
-        );
-      } else {
-        if (
-          ![
-            "/cancel",
-            "/support",
-            "/start",
-            "/wallet",
-            "/token",
-            "/deposit",
-            "/withdraw",
-            "/balance",
-            "/activity",
-          ].includes(msg.text)
-        ) {
-          bot.editMessageReplyMarkup(
-            { inline_keyboard: [] },
-            { chat_id: msg.chat.id, message_id: msg.message_id }
-          );
-        }
-        bot.sendMessage(
-          msg.chat.id,
-          `
-  <b>An error occurred on the server. 
-  Please try again later. </b>
-          `,
-          {
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "return 👈", callback_data: "return" }],
               ],
             },
           }
@@ -116,19 +82,19 @@ export const walletHandler = async (msg: any) => {
           "/activity",
         ].includes(msg.text)
       ) {
-        bot.editMessageReplyMarkup(
+        await bot.editMessageReplyMarkup(
           { inline_keyboard: [] },
           { chat_id: msg.chat.id, message_id: msg.message_id }
         );
       }
-      bot.sendMessage(
+      await bot.sendMessage(
         msg.chat.id,
         `
-  <b>Your Temper Wallet is connected.</b>
-  ${user.publicKey}
-  
-  You can deposit to this wallet by using this.
-  Command line:   /deposit
+<b>Your Anvil Wallet is connected.</b>
+${user.publicKey}
+
+You can deposit to this wallet by using this.
+Command line:   /deposit
         `,
         {
           parse_mode: "HTML",

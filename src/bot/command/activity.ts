@@ -11,9 +11,9 @@ export default new Commands(
     const fromId = msg.from.id;
     const chatId = msg.chat.id;
     if (fromId != chatId) {
-      bot.sendMessage(msg.chat.id, `No permission`, {});
+      await bot.sendMessage(msg.chat.id, `No permission`, {});
       return;
     }
-    swapHandler(msg);
+    await swapHandler(msg);
   }
 );

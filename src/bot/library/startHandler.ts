@@ -11,7 +11,7 @@ interface TuserList {
 }
 export const startHandler = async (msg: any) => {
   try {
-    removeAnswerCallback(msg.chat);
+    await removeAnswerCallback(msg.chat);
     const userList = {
       userId: msg.chat.id,
       userName: msg.chat.username,
@@ -28,8 +28,8 @@ export const startHandler = async (msg: any) => {
       },
     });
 
-    const videoPath = path.join(__dirname, "../../assets/AmariSilva.mp4");
-    bot
+    const videoPath = path.join(__dirname, "../../assets/anvilbotvide.mp4");
+    await bot
       .sendVideo(
         msg.chat.id,
         videoPath,
@@ -42,26 +42,22 @@ export const startHandler = async (msg: any) => {
           filename: "AmariSilva.mp4",
         }
       )
-      .then(() => {
-        bot.sendMessage(
+      .then(async () => {
+        await bot.sendMessage(
           msg.chat.id,
-          `Welcome to <b>Shogun Temper Bot!</b> (Total Users: ${Number(
-            userCount
-          )})
+          `Welcome to <b>Anvil Bot!</b> (Total Users: ${Number(userCount)})
   
-Elevate your Liquidity Pool farms with Shogun Temper Bot’s advanced market-tempering features. 
-Whether it’s balancing your liquidity pool or strategically tempering market activity, Shogun Temper Bot brings subtle yet powerful support to sustain growth and attract organic participants.💥
-
-<b>Get Started!</b>
-Keep your market thriving with Shogun Temper Bot, expertly designed for seamless, round-the-clock stability in your liquidity pools.
-
-<a href="${config.websiteUrl}">Shogun Temper Bot Website</a> | <a href="${
+  Meet the Anvil Bot, Shogun’s foundation tool for growth. Like an anvil, it allows you to add
+  material and swing the hammer, building the coin’s strength with each calculated trade.\n 
+  Through strategic trade ratios, the bot empowers users to forge stability over time, supporting liquidity
+  and enhancing value. Every trade reinforces the coin, turning market activity into a resilient structure.\n 
+  With the Anvil Bot, you hold the power to shape the coin’s future with precision and control.
+  
+  <a href="${config.websiteUrl}">Anvil Bot Website</a> | <a href="${
             config.twitterUrl
           }">Twitter</a> | <a href="${
             config.telegramUrl
-          }">Telegram</a> | <a href="${
-            config.supportUrl
-          }">Shogun Temper Bot Guide</a>`,
+          }">Telegram</a> | <a href="${config.supportUrl}">Anvil Bot Guide</a>`,
           user
             ? user1
               ? {
@@ -180,6 +176,6 @@ Keep your market thriving with Shogun Temper Bot, expertly designed for seamless
         );
       });
   } catch (error) {
-    console.error("Error bot start: ", error);
+    console.log("startHandlerError: ", error);
   }
 };

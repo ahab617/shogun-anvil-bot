@@ -2,9 +2,13 @@ const { Tokens } = require("../db/model");
 const { Swap } = require("../db/model");
 
 const findOne = async (props: any) => {
-  const { filter } = props;
-  const result = await Tokens.findOne(filter);
-  return result;
+  try {
+    const { filter } = props;
+    const result = await Tokens.findOne(filter);
+    return result;
+  } catch (error) {
+    throw new Error("Failed to find tokenSettingInfo");
+  }
 };
 
 const create = async (tokenInfo: any) => {
@@ -14,7 +18,7 @@ const create = async (tokenInfo: any) => {
 
     return newTokenSave;
   } catch (error) {
-    return null;
+    throw new Error("Failed to create tokenSettingInfo");
   }
 };
 
@@ -33,7 +37,7 @@ const deleteOne = async (props: any) => {
       return { status: 202 };
     }
   } catch (error) {
-    return { status: 500 };
+    throw new Error("Failed to delete tokenSettingInfo");
   }
 };
 

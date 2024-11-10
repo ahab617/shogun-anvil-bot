@@ -1,9 +1,22 @@
 const { Wallet } = require("../db/model");
 
 const findOne = async (props: any) => {
-  const { filter } = props;
-  const result = await Wallet.findOne(filter);
-  return result;
+  try {
+    const { filter } = props;
+    const result = await Wallet.findOne(filter);
+    return result;
+  } catch (error) {
+    throw new Error("Failed to find walletInfo");
+  }
+};
+
+const find = async () => {
+  try {
+    const result = await Wallet.find();
+    return result;
+  } catch (error) {
+    throw new Error("Failed to find walletInfo");
+  }
 };
 
 const create = async (
@@ -21,19 +34,20 @@ const create = async (
     const savedWallet = await newWallet.save();
     return savedWallet;
   } catch (error) {
-    throw new Error("Database Error");
+    throw new Error("Failed to create walletInfo");
   }
 };
+
 const deleteOne = async (props: any) => {
-  const { filter } = props;
-  const result = await Wallet.deleteOne(filter);
-  return result;
+  try {
+    const { filter } = props;
+    const result = await Wallet.deleteOne(filter);
+    return result;
+  } catch (error) {
+    throw new Error("Failed to delete walletInfo");
+  }
 };
 
-const find = async () => {
-  const result = await Wallet.find();
-  return result;
-};
 export default {
   findOne,
   create,

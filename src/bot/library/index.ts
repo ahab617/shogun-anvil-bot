@@ -35,7 +35,7 @@ export const deleteMessage = async (message: Message) => {
   try {
     await bot.deleteMessage(message.chat.id, message.message_id);
   } catch (err) {
-    console.error("deleteMessage = ", err);
+    console.log("deleteMessage = ", err);
   }
 };
 
@@ -43,6 +43,6 @@ export const deleteMessage1 = async (message: Message, message_id: number) => {
   try {
     await bot.deleteMessage(message.chat.id, message_id);
   } catch (err) {
-    console.error("deleteMessage = ", err);
+    console.log("deleteMessage = ", err);
   }
 };

@@ -6,14 +6,17 @@ const AdminSettingSchema = new Schema({
   fee: { type: Number, required: true },
   miniAmount: { type: Number, required: true },
 });
+
 const AdminListSchema = new Schema({
   userId: { type: Number, required: true },
   userName: { type: String, required: true },
 });
+
 const UserListSchema = new Schema({
   userId: { type: Number, required: true },
   userName: { type: String, required: true },
 });
+
 const SwapSchema = new Schema({
   baseToken: { type: String, required: true },
   baseSymbol: { type: String, required: true },

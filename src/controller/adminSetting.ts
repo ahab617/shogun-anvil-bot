@@ -6,7 +6,7 @@ const findOne = async (props: any) => {
     const result = await AdminSetting.findOne(filter);
     return result;
   } catch (error) {
-    throw new Error("Failed to find deposit");
+    throw new Error("Failed to find adminDepositSettingInfo");
   }
 };
 const find = async () => {
@@ -14,7 +14,7 @@ const find = async () => {
     const result = await AdminSetting.find();
     return { status: 200, result: result };
   } catch (error) {
-    return { status: 500, result: null };
+    throw new Error("Failed to find adminDepositSettingInfo");
   }
 };
 const create = async (data: any) => {
@@ -37,7 +37,7 @@ const create = async (data: any) => {
       }
     }
   } catch (error) {
-    return { status: 500, message: "Internal server error" };
+    throw new Error("Failed to create adminDepositSettingInfo");
   }
 };
 
