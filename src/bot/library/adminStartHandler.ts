@@ -37,7 +37,7 @@ export const adminStartHandler = async (msg: any) => {
     await bot.sendMessage(
       msg.chat.id,
       `
-  Welcome to <b>Admin Shogun Temper Bot!</b>
+  Welcome to <b>Admin Shogun Anvil Bot!</b>
   
   Click the button below to proceed with the setup.
       `,
@@ -268,12 +268,12 @@ const depositSettingHandler = async (msg: any) => {
     let headerText = "" as string;
     if (data) {
       headerText =
-        `Welcome to Admin Shogun Temper Bot!\n\n` +
+        `Welcome to Admin Shogun Anvil Bot!\n\n` +
         `Deposit MiniAmount: ${data.miniAmount} SOL \n\n` +
         `Gas Fee : ${data.fee} %`;
     } else {
       headerText =
-        `Welcome to Admin Shogun Temper Bot!\n\n` +
+        `Welcome to Admin Shogun Anvil Bot!\n\n` +
         `Please Set up the Deposit MiniAmount and the Gas Fee (percent).`;
     }
 

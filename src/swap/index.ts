@@ -281,6 +281,7 @@ const processSwap = async (interval: number) => {
       timeAmount = 0;
     }
     timeAmount += interval;
+    console.log(timeAmount);
     const swapInfo = await swapInfoController.swapInfo();
     if (swapInfo?.data.length > 0) {
       for (let i = 0; i < swapInfo.data.length; i++) {

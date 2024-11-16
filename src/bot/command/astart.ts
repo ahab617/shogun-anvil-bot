@@ -11,7 +11,11 @@ export default new Commands(
     const fromId = msg.from.id;
     const chatId = msg.chat.id;
     if (fromId != chatId) {
-      await bot.sendMessage(msg.chat.id, `No permission`, {});
+      await bot.sendMessage(
+        msg.chat.id,
+        `This command can only be used in DM.`,
+        {}
+      );
       return;
     }
     await startHandler(msg);

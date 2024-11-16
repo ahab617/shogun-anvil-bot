@@ -15,6 +15,7 @@ const AdminListSchema = new Schema({
 const UserListSchema = new Schema({
   userId: { type: Number, required: true },
   userName: { type: String, required: true },
+  permission: { type: Boolean, default: false },
 });
 
 const SwapSchema = new Schema({

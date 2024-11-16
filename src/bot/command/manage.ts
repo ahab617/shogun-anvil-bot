@@ -10,12 +10,6 @@ export default new Commands(
   "manage",
   true,
   async (msg: any) => {
-    const fromId = msg.from.id;
-    const chatId = msg.chat.id;
-    if (fromId != chatId) {
-      bot.sendMessage(msg.chat.id, `No permission`, {});
-      return;
-    }
     const adminList = await adminListController.find();
     if (
       msg.chat.id == config.SUPER_ADMIN_ID ||
@@ -23,12 +17,7 @@ export default new Commands(
     ) {
       adminStartHandler(msg);
     } else {
-      bot.sendMessage(msg.chat.id, `You aren't admin `, {
-        parse_mode: "HTML",
-        reply_markup: {
-          inline_keyboard: [[{ text: "Return  👈", callback_data: "return" }]],
-        },
-      });
+      bot.sendMessage(msg.chat.id, `No permission.`, {});
     }
   }
 );
