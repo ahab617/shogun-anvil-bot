@@ -78,11 +78,11 @@ export const startHandler = async (msg: any) => {
                       [
                         {
                           text: "Support",
-                          url: config.supportUrl,
+                          url: `${config.supportUrl}`,
                         },
                         {
                           text: "Learn more 🔗",
-                          url: config.supportUrl,
+                          url: `${config.supportUrl}`,
                         },
                       ],
                     ],
@@ -106,11 +106,11 @@ export const startHandler = async (msg: any) => {
                       [
                         {
                           text: "Support",
-                          url: config.supportUrl,
+                          url: `${config.supportUrl}`,
                         },
                         {
                           text: "Learn more 🔗",
-                          url: config.supportUrl,
+                          url: `${config.supportUrl}`,
                         },
                       ],
                     ],
@@ -135,11 +135,11 @@ export const startHandler = async (msg: any) => {
                     [
                       {
                         text: "Support",
-                        url: config.supportUrl,
+                        url: `${config.supportUrl}`,
                       },
                       {
                         text: "Learn more 🔗",
-                        url: config.supportUrl,
+                        url: `${config.supportUrl}`,
                       },
                     ],
                   ],
@@ -163,11 +163,11 @@ export const startHandler = async (msg: any) => {
                     [
                       {
                         text: "Support",
-                        url: config.supportUrl,
+                        url: `${config.supportUrl}`,
                       },
                       {
                         text: "Learn more 🔗",
-                        url: config.supportUrl,
+                        url: `${config.supportUrl}`,
                       },
                     ],
                   ],

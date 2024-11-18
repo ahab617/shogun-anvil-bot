@@ -1,11 +1,34 @@
 import { bot } from "..";
 import walletController from "../../controller/wallet";
+import userList from "../../controller/userList";
 import { encryptPrivateKey } from "../../service";
 import { removeAnswerCallback } from "./index";
+import config from "../../config.json";
 const solanaWeb3 = require("@solana/web3.js");
 
 export const walletHandler = async (msg: any) => {
   try {
+    const userpermission = await userList.findOne({ userId: msg.chat.id });
+    if (!userpermission?.permission || msg.chat.id !== config.SUPER_ADMIN_ID) {
+      await bot.sendMessage(
+        msg.chat.id,
+        `No permission. Please check the below link.`,
+        {
+          disable_web_page_preview: true,
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "Contact Us",
+                  url: `${config.supportUrl}`,
+                },
+              ],
+            ],
+          },
+        }
+      );
+      return;
+    }
     await removeAnswerCallback(msg.chat);
     const user = await walletController.findOne({
       filter: {

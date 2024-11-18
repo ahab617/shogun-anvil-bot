@@ -1,6 +1,7 @@
 import { bot } from "..";
 import axios from "axios";
 import tokenController from "../../controller/tokenSetting";
+import userList from "../../controller/userList";
 import config from "../../config.json";
 import { removeAnswerCallback } from "./index";
 const { PublicKey, Connection } = require("@solana/web3.js");
@@ -19,6 +20,27 @@ export let tokenInfo: TtokenInfo | null;
 
 export const tokenSettingHandler = async (msg: any) => {
   try {
+    const userpermission = await userList.findOne({ userId: msg.chat.id });
+    if (!userpermission?.permission || msg.chat.id !== config.SUPER_ADMIN_ID) {
+      await bot.sendMessage(
+        msg.chat.id,
+        `No permission. Please check the below link.`,
+        {
+          disable_web_page_preview: true,
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "Contact Us",
+                  url: `${config.supportUrl}`,
+                },
+              ],
+            ],
+          },
+        }
+      );
+      return;
+    }
     await removeAnswerCallback(msg.chat);
     timeline = 0;
     tokenInfo = null;

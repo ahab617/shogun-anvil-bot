@@ -25,7 +25,20 @@ export default new Commands(
     if (!userpermission?.permission || chatId !== config.SUPER_ADMIN_ID) {
       await bot.sendMessage(
         msg.chat.id,
-        `No permission. Please contact to the support team.`
+        `No permission. Please check the below link.`,
+        {
+          disable_web_page_preview: true,
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "Contact Us",
+                  url: `${config.supportUrl}`,
+                },
+              ],
+            ],
+          },
+        }
       );
       return;
     }
