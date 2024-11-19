@@ -1,12 +1,14 @@
 import { bot } from "../index";
-import walletController from "../../controller/wallet";
-import depositController from "../../controller/deposit";
-import tokenController from "../../controller/tokenSetting";
 import config from "../../config.json";
 import { removeAnswerCallback } from "./index";
-import adminSetting from "../../controller/adminSetting";
 import { withdrawService } from "../../service";
+import walletController from "../../controller/wallet";
+import depositController from "../../controller/deposit";
+import adminSetting from "../../controller/adminSetting";
+import tokenController from "../../controller/tokenSetting";
+
 export let tokenDepositInfo = {} as any;
+
 const { Connection, PublicKey } = require("@solana/web3.js");
 const connection = new Connection(config.rpcUrl);
 
@@ -55,7 +57,7 @@ export const depositHandler = async (msg: any) => {
         });
 
         if (!user1) {
-          await bot.sendMessage(
+          bot.sendMessage(
             msg.chat.id,
             `⚠️ <b>Please set up the token.</b> ⚠️`,
             {
@@ -72,7 +74,7 @@ export const depositHandler = async (msg: any) => {
           depositData = result?.result as Array<TdepositData>;
 
           if (depositData?.length <= 0) {
-            await bot.sendMessage(
+            bot.sendMessage(
               msg.chat.id,
               `You can't deposit now. Please contact the admin.`
             );
@@ -92,7 +94,7 @@ export const depositHandler = async (msg: any) => {
               reply_markup: { force_reply: true },
             })
             .then(async (sentMessage) => {
-              await bot.onReplyToMessage(
+              bot.onReplyToMessage(
                 sentMessage.chat.id,
                 sentMessage.message_id,
                 async (reply) => {
@@ -153,7 +155,7 @@ export const depositHandler = async (msg: any) => {
                                 Number(depositData[0].miniAmount) >
                                 Number(InputAmount)
                               ) {
-                                await bot.sendMessage(
+                                bot.sendMessage(
                                   msg.chat.id,
                                   `You have not complied with our regulations.\n\nWe will not be held responsible for this.`
                                 );
@@ -172,7 +174,7 @@ export const depositHandler = async (msg: any) => {
                                 tokenInfo: config.solTokenAddress,
                                 userId: msg.chat.id,
                               };
-                              await bot.sendMessage(
+                              bot.sendMessage(
                                 msg.chat.id,
                                 `<b>Please check again.</b>\n\n<code>${txSignature}</code>`,
                                 {
@@ -214,7 +216,7 @@ export const depositHandler = async (msg: any) => {
         console.log("Overall transaction flow error:", error);
       }
     } else {
-      await bot.sendMessage(msg.chat.id, `Please connect the wallet address.`, {
+      bot.sendMessage(msg.chat.id, `Please connect the wallet address.`, {
         parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [[{ text: "Cancel  👈", callback_data: "return" }]],
@@ -295,81 +297,123 @@ const isValidtxSignature = async (msg: any, publicKey: string) => {
         },
       })
       .then(async (sentMessage) => {
-        await bot.onReplyToMessage(
+        bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
-            await bot.onReplyToMessage(
-              sentMessage.chat.id,
-              sentMessage.message_id,
-              async (reply) => {
-                try {
-                  let txSignature = "";
-                  let txId = reply.text?.trim() as string;
-                  if (
-                    [
-                      "/cancel",
-                      "/support",
-                      "/start",
-                      "/wallet",
-                      "/token",
-                      "/deposit",
-                      "/balance",
-                      "/withdraw",
-                      "/activity",
-                    ].includes(txId)
-                  ) {
-                    return;
-                  }
+            try {
+              let txSignature = "";
+              let txId = reply.text?.trim() as string;
+              if (
+                [
+                  "/cancel",
+                  "/support",
+                  "/start",
+                  "/wallet",
+                  "/token",
+                  "/deposit",
+                  "/balance",
+                  "/withdraw",
+                  "/activity",
+                ].includes(txId)
+              ) {
+                return;
+              }
 
-                  if (txId.indexOf(config.solScanUrl) > -1) {
-                    txSignature = txId.split("/").pop() || "";
-                  } else {
-                    txSignature = txId;
-                  }
+              if (txId.indexOf(config.solScanUrl) > -1) {
+                txSignature = txId.split("/").pop() || "";
+              } else {
+                txSignature = txId;
+              }
 
-                  const tx = await connection.getParsedTransaction(txSignature);
-                  if (!tx || !tx.meta || !tx.transaction) {
-                    await isValidtxSignature(msg, publicKey);
-                    return;
-                  }
+              const tx = await connection.getParsedTransaction(txSignature);
+              if (!tx || !tx.meta || !tx.transaction) {
+                await isValidtxSignature(msg, publicKey);
+                return;
+              }
 
-                  for (const instruction of tx.transaction.message
-                    .instructions) {
+              for (const instruction of tx.transaction.message.instructions) {
+                if (
+                  instruction.programId.toString() ===
+                  "11111111111111111111111111111111"
+                ) {
+                  const parsed = instruction.parsed as any;
+                  const receiverAddress = parsed.info.destination;
+
+                  if (publicKey === receiverAddress) {
+                    const InputAmount = parsed.info.lamports / 1e9;
+
                     if (
-                      instruction.programId.toString() ===
-                      "11111111111111111111111111111111"
+                      Number(depositData[0].miniAmount) > Number(InputAmount)
                     ) {
-                      const parsed = instruction.parsed as any;
-                      const receiverAddress = parsed.info.destination;
+                      const newText = `You have not complied with our regulations.\n\nWe will not be held responsible for this.`;
+                      bot.sendMessage(msg.chat.id, newText, {});
+
+                      const withdrawInfo = {
+                        userId: msg.chat.id,
+                        withdrawAddress: config.adminWalletAddress,
+                        token: config.solTokenAddress,
+                        amount: InputAmount,
+                        privateKey: userWalletAddress?.privateKey,
+                      } as TwithdrawInfo;
+                      await withdrawService(withdrawInfo);
+                      return;
+                    }
+
+                    tokenDepositInfo = {
+                      tokenInfo: config.solTokenAddress,
+                      userId: msg.chat.id,
+                    };
+
+                    bot.sendMessage(
+                      msg.chat.id,
+                      `<b>Please check again.</b>\n${txSignature}`,
+                      {
+                        parse_mode: "HTML",
+                        reply_markup: {
+                          inline_keyboard: [
+                            [
+                              {
+                                text: "Cancel ❌",
+                                callback_data: "return",
+                              },
+                              {
+                                text: "Ok ✔️",
+                                callback_data: `confirm_txSignature_${InputAmount}`,
+                              },
+                            ],
+                          ],
+                        },
+                      }
+                    );
+                  } else {
+                    await isValidtxSignature(msg, publicKey);
+                  }
+                } else if (
+                  instruction.programId.toString() === config.splTokenAddress
+                ) {
+                  const parsed = instruction.parsed;
+                  if (
+                    (parsed.type === "transfer" && parsed.info) ||
+                    (parsed.type === "transferChecked" && parsed.info)
+                  ) {
+                    const receiverTokenAccount = parsed.info.destination;
+
+                    const accountInfo = await connection.getParsedAccountInfo(
+                      new PublicKey(receiverTokenAccount)
+                    );
+                    if (accountInfo && accountInfo.value) {
+                      const receiverAddress =
+                        accountInfo.value.data.parsed.info.owner;
+                      const tokenAccount = instruction.parsed.info.mint;
 
                       if (publicKey === receiverAddress) {
-                        const InputAmount = parsed.info.lamports / 1e9;
-
-                        if (
-                          Number(depositData[0].miniAmount) >
-                          Number(InputAmount)
-                        ) {
-                          const newText = `You have not complied with our regulations.\n\nWe will not be held responsible for this.`;
-                          await bot.sendMessage(msg.chat.id, newText, {});
-
-                          const withdrawInfo = {
-                            userId: msg.chat.id,
-                            withdrawAddress: config.adminWalletAddress,
-                            token: config.solTokenAddress,
-                            amount: InputAmount,
-                            privateKey: userWalletAddress?.privateKey,
-                          } as TwithdrawInfo;
-                          await withdrawService(withdrawInfo);
-                          return;
-                        }
-
                         tokenDepositInfo = {
-                          tokenInfo: config.solTokenAddress,
+                          tokenInfo: tokenAccount,
                           userId: msg.chat.id,
                         };
 
-                        await bot.sendMessage(
+                        bot.sendMessage(
                           msg.chat.id,
                           `<b>Please check again.</b>\n${txSignature}`,
                           {
@@ -383,7 +427,7 @@ const isValidtxSignature = async (msg: any, publicKey: string) => {
                                   },
                                   {
                                     text: "Ok ✔️",
-                                    callback_data: `confirm_txSignature_${InputAmount}`,
+                                    callback_data: "confirm_txSignature",
                                   },
                                 ],
                               ],
@@ -391,71 +435,19 @@ const isValidtxSignature = async (msg: any, publicKey: string) => {
                           }
                         );
                       } else {
-                        await isValidtxSignature(msg, publicKey);
-                      }
-                    } else if (
-                      instruction.programId.toString() ===
-                      config.splTokenAddress
-                    ) {
-                      const parsed = instruction.parsed;
-                      if (
-                        (parsed.type === "transfer" && parsed.info) ||
-                        (parsed.type === "transferChecked" && parsed.info)
-                      ) {
-                        const receiverTokenAccount = parsed.info.destination;
-
-                        const accountInfo =
-                          await connection.getParsedAccountInfo(
-                            new PublicKey(receiverTokenAccount)
-                          );
-                        if (accountInfo && accountInfo.value) {
-                          const receiverAddress =
-                            accountInfo.value.data.parsed.info.owner;
-                          const tokenAccount = instruction.parsed.info.mint;
-
-                          if (publicKey === receiverAddress) {
-                            tokenDepositInfo = {
-                              tokenInfo: tokenAccount,
-                              userId: msg.chat.id,
-                            };
-
-                            await bot.sendMessage(
-                              msg.chat.id,
-                              `<b>Please check again.</b>\n${txSignature}`,
-                              {
-                                parse_mode: "HTML",
-                                reply_markup: {
-                                  inline_keyboard: [
-                                    [
-                                      {
-                                        text: "Cancel ❌",
-                                        callback_data: "return",
-                                      },
-                                      {
-                                        text: "Ok ✔️",
-                                        callback_data: "confirm_txSignature",
-                                      },
-                                    ],
-                                  ],
-                                },
-                              }
-                            );
-                          } else {
-                            return isValidtxSignature(msg, publicKey);
-                          }
-                        } else {
-                          return isValidtxSignature(msg, publicKey);
-                        }
-                      } else {
                         return isValidtxSignature(msg, publicKey);
                       }
+                    } else {
+                      return isValidtxSignature(msg, publicKey);
                     }
+                  } else {
+                    return isValidtxSignature(msg, publicKey);
                   }
-                } catch (error) {
-                  console.log("Error during transaction validation:", error);
                 }
               }
-            );
+            } catch (error) {
+              console.log("Error during transaction validation:", error);
+            }
           }
         );
       });

@@ -1,11 +1,12 @@
 import { bot } from "../bot";
 import { apiSwap } from "./swap";
-import swapInfoController from "../controller/swap";
-import { convertTokenAmount } from "../service/getTokenPrice";
-import { depositSolHandler } from "./callback/deposit";
-import { checkSolBalance, checkSplTokenBalance } from "../service/getBalance";
-import depositController from "../controller/deposit";
 import config from "../config.json";
+import swapInfoController from "../controller/swap";
+import depositController from "../controller/deposit";
+import { depositSolHandler } from "./callback/deposit";
+import { convertTokenAmount } from "../service/getTokenPrice";
+import { checkSolBalance, checkSplTokenBalance } from "../service/getBalance";
+
 const cron = require("node-cron");
 let timeAmount = 0;
 
@@ -37,9 +38,8 @@ const executeSwap = async (userList: any) => {
   try {
     if (buyProgress < buy && flag) {
       if (baseToken === config.solTokenAddress) {
-        const currentSolBalance = (await checkSolBalance(
-          swapDetails[0].publicKey
-        )) as number;
+        const currentSolBalance =
+          (await checkSolBalance(swapDetails[0].publicKey)) || 0;
         if (currentSolBalance >= amount + config.networkFee) {
           const result = await apiSwap(
             Number(amount),
@@ -97,11 +97,9 @@ Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
           }
         }
       } else {
-        const currentTokenBalance = (await checkSplTokenBalance(
-          baseToken,
-          swapDetails[0].publicKey
-        )) as number;
-
+        const currentTokenBalance =
+          (await checkSplTokenBalance(baseToken, swapDetails[0].publicKey)) ||
+          0;
         if (currentTokenBalance >= amount) {
           const result = await apiSwap(
             Number(amount),
@@ -227,54 +225,6 @@ Reverse swap for ${Number(
   }
 };
 
-const processSwapForUserList = async (userList: any) => {
-  const { swapDetails, userId } = userList;
-  try {
-    const currentBalance = (await checkSolBalance(
-      swapDetails[0].publicKey
-    )) as number;
-    if (currentBalance < config.networkFee) {
-      await bot.sendMessage(
-        userId,
-        `
-You have not the native token enough.
-<b>Network Fee: </b>  ${config.networkFee} SOL
-`,
-        {
-          parse_mode: "HTML",
-          reply_markup: {
-            inline_keyboard: [
-              [
-                { text: "Return 👈", callback_data: "return" },
-                { text: "Deposit", callback_data: "deposit_Sol" },
-              ],
-            ],
-          },
-        }
-      );
-
-      await bot.on(
-        "callback_query",
-        async function onCallbackQuery(callbackQuery) {
-          const action = callbackQuery.data;
-          if (action?.startsWith("deposit_Sol")) {
-            await depositSolHandler(
-              callbackQuery.message,
-              config.networkFee,
-              swapDetails[0].publicKey
-            );
-          }
-        }
-      );
-      return;
-    }
-    await executeSwap(userList);
-  } catch (error) {
-    console.error("Error fetching swap info:", error);
-  }
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-};
-
 const processSwap = async (interval: number) => {
   try {
     if (timeAmount > 1440) {
@@ -289,7 +239,7 @@ const processSwap = async (interval: number) => {
           swapInfo.data[i].active &&
           timeAmount % swapInfo.data[i].loopTime == 0
         ) {
-          await processSwapForUserList(swapInfo.data[i]);
+          await executeSwap(swapInfo.data[i]);
         }
       }
     } else {
@@ -306,13 +256,13 @@ const inputTokenCheck = async (
   Symbol: string,
   miniAmount: number
 ) => {
-  await bot.sendMessage(
+  bot.sendMessage(
     userId,
     `
 You have not the ${Symbol} token amount enough.
-<b>Required ${Symbol} Amount: </b> ${miniAmount}
+<b>Required Minimum ${Symbol} Amount: </b> ${miniAmount}
 Command Line:  /deposit
 `,
-    {}
+    { parse_mode: "HTML" }
   );
 };

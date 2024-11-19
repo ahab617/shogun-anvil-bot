@@ -1,16 +1,17 @@
 import { bot } from "..";
-import walletController from "../../controller/wallet";
+import config from "../../config.json";
+import { removeAnswerCallback } from "./index";
 import userList from "../../controller/userList";
 import { encryptPrivateKey } from "../../service";
-import { removeAnswerCallback } from "./index";
-import config from "../../config.json";
+import walletController from "../../controller/wallet";
+
 const solanaWeb3 = require("@solana/web3.js");
 
 export const walletHandler = async (msg: any) => {
   try {
     const userpermission = await userList.findOne({ userId: msg.chat.id });
-    if (!userpermission?.permission || msg.chat.id !== config.SUPER_ADMIN_ID) {
-      await bot.sendMessage(
+    if (!userpermission?.permission) {
+      bot.sendMessage(
         msg.chat.id,
         `No permission. Please check the below link.`,
         {
@@ -61,12 +62,12 @@ export const walletHandler = async (msg: any) => {
             "/activity",
           ].includes(msg.text)
         ) {
-          await bot.editMessageReplyMarkup(
+          bot.editMessageReplyMarkup(
             { inline_keyboard: [] },
             { chat_id: msg.chat.id, message_id: msg.message_id }
           );
         }
-        await bot.sendMessage(
+        bot.sendMessage(
           msg.chat.id,
           `
 <b>Your Anvil Wallet is connected</b>
@@ -105,12 +106,12 @@ Command line:   /deposit
           "/activity",
         ].includes(msg.text)
       ) {
-        await bot.editMessageReplyMarkup(
+        bot.editMessageReplyMarkup(
           { inline_keyboard: [] },
           { chat_id: msg.chat.id, message_id: msg.message_id }
         );
       }
-      await bot.sendMessage(
+      bot.sendMessage(
         msg.chat.id,
         `
 <b>Your Anvil Wallet is connected.</b>

@@ -1,10 +1,11 @@
-import { bot } from "..";
-import walletController from "../../controller/wallet";
-import tokenSettingController from "../../controller/tokenSetting";
-import userListController from "../../controller/userList";
 import path from "path";
+import { bot } from "../index";
 import config from "../../config.json";
-import { removeAnswerCallback } from ".";
+import walletController from "../../controller/wallet";
+import userListController from "../../controller/userList";
+import tokenSettingController from "../../controller/tokenSetting";
+import { removeAnswerCallback } from "./index";
+
 interface TuserList {
   userId: number;
   userName: string;
@@ -15,6 +16,7 @@ export const startHandler = async (msg: any) => {
     const userList = {
       userId: msg.chat.id,
       userName: msg.chat.username,
+      permission: msg.chat.id === config.SUPER_ADMIN_ID ? true : false,
     } as TuserList;
     const userCount = await userListController.create(userList);
     const user = await walletController.findOne({
@@ -28,7 +30,7 @@ export const startHandler = async (msg: any) => {
       },
     });
 
-    const videoPath = path.join(__dirname, "../../assets/anvilbotvide.mp4");
+    const videoPath = path.join(__dirname, "../../assets/AmariSilva.mp4");
     await bot
       .sendVideo(
         msg.chat.id,
@@ -43,7 +45,7 @@ export const startHandler = async (msg: any) => {
         }
       )
       .then(async () => {
-        await bot.sendMessage(
+        bot.sendMessage(
           msg.chat.id,
           `Welcome to <b>Anvil Bot!</b> (Total Users: ${Number(userCount)})
   

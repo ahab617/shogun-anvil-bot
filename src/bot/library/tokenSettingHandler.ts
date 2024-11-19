@@ -1,9 +1,10 @@
 import { bot } from "..";
 import axios from "axios";
-import tokenController from "../../controller/tokenSetting";
-import userList from "../../controller/userList";
 import config from "../../config.json";
 import { removeAnswerCallback } from "./index";
+import userList from "../../controller/userList";
+import tokenController from "../../controller/tokenSetting";
+
 const { PublicKey, Connection } = require("@solana/web3.js");
 const connection = new Connection(config.rpcUrl);
 
@@ -21,8 +22,8 @@ export let tokenInfo: TtokenInfo | null;
 export const tokenSettingHandler = async (msg: any) => {
   try {
     const userpermission = await userList.findOne({ userId: msg.chat.id });
-    if (!userpermission?.permission || msg.chat.id !== config.SUPER_ADMIN_ID) {
-      await bot.sendMessage(
+    if (!userpermission?.permission) {
+      bot.sendMessage(
         msg.chat.id,
         `No permission. Please check the below link.`,
         {
@@ -63,12 +64,12 @@ export const tokenSettingHandler = async (msg: any) => {
           "/activity",
         ].includes(msg.text)
       ) {
-        await bot.editMessageReplyMarkup(
+        bot.editMessageReplyMarkup(
           { inline_keyboard: [] },
           { chat_id: msg.chat.id, message_id: msg.message_id }
         );
       }
-      await bot
+      bot
         .sendMessage(
           msg.chat.id,
           `
@@ -81,7 +82,7 @@ export const tokenSettingHandler = async (msg: any) => {
           }
         )
         .then(async (sentMessage) => {
-          await bot.onReplyToMessage(
+          bot.onReplyToMessage(
             sentMessage.chat.id,
             sentMessage.message_id,
             async (reply) => {
@@ -105,7 +106,7 @@ export const tokenSettingHandler = async (msg: any) => {
               if (tokenInfo) {
                 const r = await tokenController.create(tokenInfo);
                 if (r) {
-                  await bot.sendMessage(
+                  bot.sendMessage(
                     msg.chat.id,
                     `Setting is completed successfully .
   
@@ -145,14 +146,14 @@ export const tokenSettingHandler = async (msg: any) => {
       if (response?.status == 200 && response?.data?.pairs) {
         marketCap = response.data.pairs[0].marketCap;
       } else {
-        await bot.sendMessage(
+        bot.sendMessage(
           msg.chat.id,
           `API request failed. Please try again.`,
           {}
         );
         return;
       }
-      await bot.sendMessage(
+      bot.sendMessage(
         msg.chat.id,
         `
   ✅ Token is valid.
@@ -243,7 +244,7 @@ const promptForTokenAddress = async (msg: any) => {
         }
       )
       .then(async (sentMessage) => {
-        await bot.onReplyToMessage(
+        bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -267,7 +268,7 @@ const promptForTokenAddress = async (msg: any) => {
             if (tokenInfo) {
               const r = await tokenController.create(tokenInfo);
               if (r) {
-                await bot.sendMessage(
+                bot.sendMessage(
                   msg.chat.id,
                   `Setting is completed successfully.
 

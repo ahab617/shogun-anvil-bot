@@ -1,11 +1,11 @@
 import { bot } from "../index";
-import { SendMessageOptions } from "node-telegram-bot-api";
-import depositSettingController from "../../controller/adminSetting";
-import adminListController from "../../controller/adminList";
+import config from "../../config.json";
 import { generateCallbackOption } from "./index";
 import { deleteMessage, deleteMessage1 } from "./index";
+import { SendMessageOptions } from "node-telegram-bot-api";
+import adminListController from "../../controller/adminList";
 import { adminReturnHandler } from "../library/returnHandler";
-import config from "../../config.json";
+import depositSettingController from "../../controller/adminSetting";
 
 interface TadminStatus {
   depositEdit: boolean;
@@ -34,7 +34,7 @@ let gasFee = 0 as number;
 
 export const adminStartHandler = async (msg: any) => {
   try {
-    await bot.sendMessage(
+    bot.sendMessage(
       msg.chat.id,
       `
   Welcome to <b>Admin Shogun Anvil Bot!</b>
@@ -217,7 +217,7 @@ const addAdmin = async (msg: any) => {
       };
     }
 
-    await bot.sendMessage(msg.chat.id, newText, opts as SendMessageOptions);
+    bot.sendMessage(msg.chat.id, newText, opts as SendMessageOptions);
   } catch (error) {
     console.log("addAdmin: ", error);
   }
@@ -230,19 +230,19 @@ const addAdminModal = async (msg: any) => {
     const opts = { ...baseOption };
     const newText =
       `Please enter admin ID with userName.\n\n` + `<b>ex: 000000_King</b>`;
-    await bot.sendMessage(msg.chat.id, newText, opts as SendMessageOptions);
+    bot.sendMessage(msg.chat.id, newText, opts as SendMessageOptions);
   } catch (error) {
     console.log("addAdminModal: ", error);
   }
 };
 const selectAdminModal = async (msg: any, data: any) => {
   try {
-    await deleteMessage(msg);
+    deleteMessage(msg);
     const userId = Number(data.split("_")[1]);
     const userName = data.split("_")[2];
     const newText =
       `<b>ID: </b> ${userId}\n\n` + `<b>UserName: </b> ${userName}`;
-    await bot.sendMessage(msg.chat.id, newText, {
+    bot.sendMessage(msg.chat.id, newText, {
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
@@ -297,7 +297,7 @@ const depositAmountModal = async (msg: any) => {
   try {
     await deleteMessage(msg);
     const newText = `Please Enter the Deposit MiniAmount.\n\n` + `ex: 0.5 `;
-    await bot.sendMessage(msg.chat.id, newText, {
+    bot.sendMessage(msg.chat.id, newText, {
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [[{ text: "Return  👈", callback_data: "admin_ui" }]],
@@ -315,7 +315,7 @@ const gasFeeEditModal = async (msg: any) => {
       `<b>Deposit MiniAmount: </b>  ${msg.text} \n\n` +
       `Please Enter the Gas Fee. (%)\n` +
       `ex: 20`;
-    await bot.sendMessage(msg.chat.id, newText, {
+    bot.sendMessage(msg.chat.id, newText, {
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [[{ text: "Return  👈", callback_data: "admin_ui" }]],
@@ -332,7 +332,7 @@ const adminValidatorModal = async (msg: any) => {
     const baseOption = await generateCallbackOption(msg, "HTML");
     const opts = { ...baseOption };
     const newText = `Please enter the valid type.`;
-    await bot.sendMessage(msg.chat.id, newText, opts as SendMessageOptions);
+    bot.sendMessage(msg.chat.id, newText, opts as SendMessageOptions);
   } catch (error) {
     console.log("adminValidatorModal in adminStartHandler:", error);
   }
@@ -340,8 +340,8 @@ const adminValidatorModal = async (msg: any) => {
 
 const validatorModal = async (msg: any) => {
   try {
-    await deleteMessage1(msg, msg.message_id - 1);
-    await bot.sendMessage(
+    deleteMessage1(msg, msg.message_id - 1);
+    bot.sendMessage(
       msg.chat.id,
       `
       Please Valid Amount.
@@ -368,7 +368,7 @@ const settingShowModal = async (msg: any) => {
       `<b>Setup is ready.</b>\n\n` +
       `<b>Deposit MiniAmout: </b>  ${depositMiniAmount} SOL\n` +
       `<b>Gas Fee: </b>  ${gasFee} %`;
-    await bot.sendMessage(msg.chat.id, newText, {
+    bot.sendMessage(msg.chat.id, newText, {
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
@@ -386,10 +386,10 @@ const settingShowModal = async (msg: any) => {
 
 const alertModal = async (msg: any) => {
   try {
-    await deleteMessage(msg);
+    deleteMessage(msg);
     const baseOption = await generateCallbackOption(msg, "HTML");
     const opts = { ...baseOption };
-    await bot.sendMessage(
+    bot.sendMessage(
       msg.chat.id,
       `
       <b>You aren't SuperAdmin.</b>
@@ -403,14 +403,14 @@ const alertModal = async (msg: any) => {
 
 const resultShowModal = async (msg: any) => {
   try {
-    await deleteMessage(msg);
+    deleteMessage(msg);
     const data = {
       userId: msg.chat.id,
       miniAmount: depositMiniAmount,
       fee: gasFee,
     };
     const result = await depositSettingController.create(data);
-    await bot.sendMessage(msg.chat.id, `${result.msg}`, {
+    bot.sendMessage(msg.chat.id, `${result.msg}`, {
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
@@ -425,15 +425,11 @@ const resultShowModal = async (msg: any) => {
 
 const addAdminResultModal = async (result: any, msg: any) => {
   try {
-    await deleteMessage1(msg, msg.message_id - 1);
+    deleteMessage1(msg, msg.message_id - 1);
     const baseOption = await generateCallbackOption(msg, "HTML");
     const opts = { ...baseOption };
     adminStatus.addAdmin = false;
-    await bot.sendMessage(
-      msg.chat.id,
-      `${result?.msg}`,
-      opts as SendMessageOptions
-    );
+    bot.sendMessage(msg.chat.id, `${result?.msg}`, opts as SendMessageOptions);
   } catch (error) {
     console.log("AddAdminResultModal in adminStartHandler:", error);
   }
@@ -441,14 +437,14 @@ const addAdminResultModal = async (result: any, msg: any) => {
 
 const adminDeleteConfirm = async (msg: any, userId: number) => {
   try {
-    await deleteMessage(msg);
+    deleteMessage(msg);
     const result = await adminListController.deleteOne({
       filter: { userId: userId },
     });
     const baseOption = await generateCallbackOption(msg, "HTML");
     const opts = { ...baseOption };
     if (result) {
-      await bot.sendMessage(
+      bot.sendMessage(
         msg.chat.id,
         `Delete is completed`,
         opts as SendMessageOptions

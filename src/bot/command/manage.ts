@@ -1,7 +1,8 @@
-import { adminStartHandler } from "../library/adminStartHandler";
+import { bot } from "../index";
 import config from "../../config.json";
 import adminListController from "../../controller/adminList";
-import { bot } from "../index";
+import { adminStartHandler } from "../library/adminStartHandler";
+
 const { Commands } = require("../index.ts");
 
 export default new Commands(

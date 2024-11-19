@@ -1,5 +1,6 @@
-import { startHandler } from "../library/startHandler";
 import { bot } from "../index";
+import { startHandler } from "../library/startHandler";
+
 const { Commands } = require("../index.ts");
 
 export default new Commands(
@@ -11,11 +12,7 @@ export default new Commands(
     const fromId = msg.from.id;
     const chatId = msg.chat.id;
     if (fromId != chatId) {
-      await bot.sendMessage(
-        msg.chat.id,
-        `This command can only be used in DM.`,
-        {}
-      );
+      bot.sendMessage(msg.chat.id, `This command can only be used in DM.`, {});
       return;
     }
     await startHandler(msg);

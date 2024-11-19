@@ -1,13 +1,13 @@
+import axios from "axios";
 import { bot } from "../index";
-import depositController from "../../controller/deposit";
-import walletController from "../../controller/wallet";
 import {
   checkSolBalance,
   checkSplTokenBalance,
 } from "../../service/getBalance";
 import config from "../../config.json";
-import axios from "axios";
 import { removeAnswerCallback } from "./index";
+import walletController from "../../controller/wallet";
+import depositController from "../../controller/deposit";
 let tokenAccount = "" as any;
 
 export const balanceHandler = async (msg: any) => {
@@ -73,24 +73,20 @@ export const balanceHandler = async (msg: any) => {
               "/activity",
             ].includes(msg.text)
           ) {
-            await bot.editMessageReplyMarkup(
+            bot.editMessageReplyMarkup(
               { inline_keyboard: [] },
               { chat_id: msg.chat.id, message_id: msg.message_id }
             );
           }
 
-          await bot.sendMessage(
-            msg.chat.id,
-            `Please add tokens to your wallet.`,
-            {
-              parse_mode: "HTML",
-              reply_markup: {
-                inline_keyboard: [
-                  [{ text: "Return 👈", callback_data: "return" }],
-                ],
-              },
-            }
-          );
+          bot.sendMessage(msg.chat.id, `Please add tokens to your wallet.`, {
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "Return 👈", callback_data: "return" }],
+              ],
+            },
+          });
         }
       } catch (error) {
         console.log("Error accessing deposit information:", error);
@@ -109,13 +105,13 @@ export const balanceHandler = async (msg: any) => {
           "/activity",
         ].includes(msg.text)
       ) {
-        await bot.editMessageReplyMarkup(
+        bot.editMessageReplyMarkup(
           { inline_keyboard: [] },
           { chat_id: msg.chat.id, message_id: msg.message_id }
         );
       }
 
-      await bot.sendMessage(msg.chat.id, `Connect your wallet to continue.`, {
+      bot.sendMessage(msg.chat.id, `Connect your wallet to continue.`, {
         parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [[{ text: "Return 👈", callback_data: "return" }]],
@@ -129,7 +125,7 @@ export const balanceHandler = async (msg: any) => {
 
 const balanceModal = async (msg: any) => {
   try {
-    await bot.sendMessage(
+    bot.sendMessage(
       msg.chat.id,
       `
 <b>Here is your current wallet balance:</b> 

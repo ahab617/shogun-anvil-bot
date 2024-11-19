@@ -5,12 +5,12 @@ import tokenSettingController from "../../controller/tokenSetting";
 
 export const deleteWallethandler = async (msg: any) => {
   try {
-    await bot.editMessageReplyMarkup(
+    bot.editMessageReplyMarkup(
       { inline_keyboard: [] },
       { chat_id: msg.chat.id, message_id: msg.message_id }
     );
 
-    await bot.sendMessage(
+    bot.sendMessage(
       msg.chat.id,
       `
   Would you like to reset your wallet?
@@ -41,7 +41,7 @@ export const confirmHandler = async (msg: any) => {
       },
     });
 
-    await bot.sendMessage(msg.chat.id, `✅ Reset is successfully completed.`);
+    bot.sendMessage(msg.chat.id, `✅ Reset is successfully completed.`);
 
     await startHandler(msg);
   } catch (error) {
@@ -51,11 +51,11 @@ export const confirmHandler = async (msg: any) => {
 
 export const deleteTokenHandler = async (msg: any) => {
   try {
-    await bot.editMessageReplyMarkup(
+    bot.editMessageReplyMarkup(
       { inline_keyboard: [] },
       { chat_id: msg.chat.id, message_id: msg.message_id }
     );
-    await bot.sendMessage(msg.chat.id, `Would you like to delete your token?`, {
+    bot.sendMessage(msg.chat.id, `Would you like to delete your token?`, {
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
@@ -73,7 +73,7 @@ export const deleteTokenHandler = async (msg: any) => {
 
 export const confirmTokenHandler = async (msg: any) => {
   try {
-    await bot.editMessageReplyMarkup(
+    bot.editMessageReplyMarkup(
       { inline_keyboard: [] },
       { chat_id: msg.chat.id, message_id: msg.message_id }
     );

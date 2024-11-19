@@ -1,14 +1,14 @@
+import axios from "axios";
 import { bot } from "../index";
+import config from "../../config.json";
 import { PublicKey } from "@solana/web3.js";
-import depositController from "../../controller/deposit";
-import walletController from "../../controller/wallet";
 import {
   checkSolBalance,
   checkSplTokenBalance,
 } from "../../service/getBalance";
 import { withdrawService } from "../../service";
-import config from "../../config.json";
-import axios from "axios";
+import walletController from "../../controller/wallet";
+import depositController from "../../controller/deposit";
 import { removeAnswerCallback } from "./index";
 
 interface TwithdrawInfo {
@@ -95,7 +95,7 @@ export const withdrawHandler = async (msg: any) => {
           }
           await withdrawModal(msg);
         } else {
-          await bot.sendMessage(msg.chat.id, `Please deposit in the wallet.`, {
+          bot.sendMessage(msg.chat.id, `Please deposit in the wallet.`, {
             parse_mode: "HTML",
             reply_markup: {
               inline_keyboard: [
@@ -108,7 +108,7 @@ export const withdrawHandler = async (msg: any) => {
         console.log("Error occurred while processing user wallet:", error);
       }
     } else {
-      await bot.sendMessage(msg.chat.id, `Please connect the wallet.`, {
+      bot.sendMessage(msg.chat.id, `Please connect the wallet.`, {
         parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [[{ text: "Return  👈", callback_data: "return" }]],
@@ -135,7 +135,7 @@ export const withdrawSelectHandler = async (msg: any, action: string | any) => {
         "/activity",
       ].includes(msg.text)
     ) {
-      await bot.editMessageReplyMarkup(
+      bot.editMessageReplyMarkup(
         { inline_keyboard: [] },
         { chat_id: msg.chat.id, message_id: msg.message_id }
       );
@@ -145,7 +145,7 @@ export const withdrawSelectHandler = async (msg: any, action: string | any) => {
         (item: any) => item.token === config.solTokenAddress
       )[0]?.balance) || "0";
     if (Number(solBalance) < config.networkFee) {
-      await bot.sendMessage(
+      bot.sendMessage(
         msg.chat.id,
         `
   Native Token Insufficient.
@@ -171,7 +171,7 @@ export const withdrawSelectHandler = async (msg: any, action: string | any) => {
           }
         )
         .then(async (sentMessage) => {
-          await bot.onReplyToMessage(
+          bot.onReplyToMessage(
             sentMessage.chat.id,
             sentMessage.message_id,
             async (reply) => {
@@ -227,7 +227,7 @@ export const applyWithdrawHandler = async (msg: any) => {
         "/activity",
       ].includes(msg.text)
     ) {
-      await bot.editMessageReplyMarkup(
+      bot.editMessageReplyMarkup(
         { inline_keyboard: [] },
         { chat_id: msg.chat.id, message_id: msg.message_id }
       );
@@ -240,7 +240,7 @@ export const applyWithdrawHandler = async (msg: any) => {
 const withdrawModal = async (msg: any) => {
   try {
     await tokenAccount.push([{ text: "Return  👈", callback_data: "return" }]);
-    await bot.sendMessage(
+    bot.sendMessage(
       msg.chat.id,
       `
   Select Withdraw Token
@@ -277,7 +277,7 @@ const promptForWithAddress = async (
         }
       )
       .then(async (sentMessage) => {
-        await bot.onReplyToMessage(
+        bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -326,7 +326,7 @@ const selectInputForm = async (
   balance: number
 ) => {
   try {
-    await bot.sendMessage(
+    bot.sendMessage(
       msg.chat.id,
       `
   <b>Current Balance: </b> ${balance}
@@ -374,7 +374,7 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
         "/activity",
       ].includes(msg.text)
     ) {
-      await bot.editMessageReplyMarkup(
+      bot.editMessageReplyMarkup(
         { inline_keyboard: [] },
         { chat_id: msg.chat.id, message_id: msg.message_id }
       );
@@ -396,7 +396,7 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
         privateKey: userBotWalletPrivateKey,
       } as TwithdrawInfo;
     }
-    await bot.sendMessage(
+    bot.sendMessage(
       msg.chat.id,
       `
   <b>To: </b> <code>${userWalletAddress}</code>
@@ -445,12 +445,12 @@ export const someWithdrawHandler = async (msg: any, action: string) => {
         "/activity",
       ].includes(msg.text)
     ) {
-      await bot.editMessageReplyMarkup(
+      bot.editMessageReplyMarkup(
         { inline_keyboard: [] },
         { chat_id: msg.chat.id, message_id: msg.message_id }
       );
     }
-    await bot
+    bot
       .sendMessage(
         msg.chat.id,
         `
@@ -465,7 +465,7 @@ export const someWithdrawHandler = async (msg: any, action: string) => {
         }
       )
       .then(async (sentMessage) => {
-        await bot.onReplyToMessage(
+        bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -497,7 +497,7 @@ export const someWithdrawHandler = async (msg: any, action: string) => {
                 amount: Number(withdrawAmount),
                 privateKey: userBotWalletPrivateKey,
               };
-              await bot.sendMessage(
+              bot.sendMessage(
                 msg.chat.id,
                 `
   <b>To: </b> <code>${userWalletAddress}</code>
@@ -565,7 +565,7 @@ const promptForWithdraw = async (
         }
       )
       .then(async (sentMessage) => {
-        await bot.onReplyToMessage(
+        bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -598,7 +598,7 @@ const promptForWithdraw = async (
                 amount: Number(withdrawAmount),
                 privateKey: userBotWalletPrivateKey,
               };
-              await bot.sendMessage(
+              bot.sendMessage(
                 msg.chat.id,
                 `
 <b>To: </b> <code>${userWalletAddress}</code>

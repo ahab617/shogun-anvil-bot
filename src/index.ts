@@ -1,6 +1,6 @@
-import { connectDatabase } from "./db";
 import { initBot } from "./bot";
 import config from "./config.json";
+import { connectDatabase } from "./db";
 import { startSwapProcess } from "./swap";
 
 async function start() {

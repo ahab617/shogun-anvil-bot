@@ -1,7 +1,7 @@
+import { bot } from "../index";
+import config from "../../config.json";
 import userListController from "../../controller/userList";
 import adminListController from "../../controller/adminList";
-import config from "../../config.json";
-import { bot } from "../index";
 const { Commands } = require("../index.ts");
 
 export default new Commands(
@@ -13,11 +13,7 @@ export default new Commands(
     const fromId = msg.from.id;
     const chatId = msg.chat.id;
     if (fromId != chatId) {
-      await bot.sendMessage(
-        msg.chat.id,
-        `This command can only be used in DM.`,
-        {}
-      );
+      bot.sendMessage(msg.chat.id, `This command can only be used in DM.`, {});
       return;
     }
 
@@ -30,7 +26,7 @@ export default new Commands(
       const userId = text.replace(/^\/addpermission/, "").trim() || "0";
       console.log(userId);
       if (!Number.isInteger(Number(userId))) {
-        await bot.sendMessage(msg.chat.id, `Please enter the valid user ID.`);
+        bot.sendMessage(msg.chat.id, `Please enter the valid user ID.`);
       } else {
         const result = await userListController.updateOne({
           userId: Number(userId),

@@ -3,7 +3,7 @@ import { startHandler } from "./startHandler";
 
 export const returnHandler = async (msg: any) => {
   try {
-    await bot.editMessageReplyMarkup(
+    bot.editMessageReplyMarkup(
       { inline_keyboard: [] },
       { chat_id: msg.chat.id, message_id: msg.message_id }
     );

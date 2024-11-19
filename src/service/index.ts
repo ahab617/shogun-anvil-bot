@@ -4,13 +4,13 @@ import {
   Keypair,
   ParsedAccountData,
 } from "@solana/web3.js";
-import { getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
-import withdrawController from "../controller/withdraw";
+import crypto from "crypto";
+import { bot } from "../bot";
+import config from "../config.json";
 import * as Web3 from "@solana/web3.js";
 import { web3 } from "@project-serum/anchor";
-import { bot } from "../bot";
-import crypto from "crypto";
-import config from "../config.json";
+import withdrawController from "../controller/withdraw";
+import { getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
 
 const ALGORITHM = "aes-256-gcm";
 const ENCRYPTION_KEY = config.salt;

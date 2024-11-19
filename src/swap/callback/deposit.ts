@@ -1,8 +1,9 @@
 import { bot } from "../../bot";
+import config from "../../config.json";
 import walletController from "../../controller/wallet";
 import depositController from "../../controller/deposit";
 import { checkSolBalance } from "../../service/getBalance";
-import config from "../../config.json";
+
 const { Connection, PublicKey } = require("@solana/web3.js");
 const connection = new Connection(config.rpcUrl);
 let tokenDepositInfo = {} as any;
@@ -14,7 +15,7 @@ export const depositHandler = async (
   miniAmount: number
 ) => {
   try {
-    await bot.editMessageReplyMarkup(
+    bot.editMessageReplyMarkup(
       { inline_keyboard: [] },
       { chat_id: msg.chat.id, message_id: msg.message_id }
     );
@@ -41,7 +42,7 @@ Please deposit to the following address and send <i>tx</i> link.
         }
       )
       .then(async (sentMessage) => {
-        await bot.onReplyToMessage(
+        bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -83,7 +84,7 @@ Please deposit to the following address and send <i>tx</i> link.
                       tokenInfo: config.solTokenAddress,
                       userId: msg.chat.id,
                     };
-                    await bot.sendMessage(
+                    bot.sendMessage(
                       msg.chat.id,
                       `
 <b>Please check again.</b>
@@ -137,7 +138,7 @@ ${txSignature}`,
                           tokenInfo: tokenAddress,
                           userId: msg.chat.id,
                         };
-                        await bot.sendMessage(
+                        bot.sendMessage(
                           msg.chat.id,
                           `
 <b>Please check again.</b>
@@ -162,7 +163,7 @@ ${txSignature}`,
                         );
                       }
                     } else {
-                      await bot.sendMessage(
+                      bot.sendMessage(
                         msg.chat.id,
                         `
 <b>Failed to deposit.</b>
@@ -178,7 +179,7 @@ ${txSignature}`,
                       );
                     }
                   } else {
-                    await bot.sendMessage(
+                    bot.sendMessage(
                       msg.chat.id,
                       `
 <b>Failed to deposit.</b>
@@ -208,22 +209,22 @@ export const inputToken_txSignature = async (msg: any) => {
   try {
     const result = await depositController.create(tokenDepositInfo);
     if (result.status == 200) {
-      await bot.editMessageReplyMarkup(
+      bot.editMessageReplyMarkup(
         { inline_keyboard: [] },
         { chat_id: msg.chat.id, message_id: msg.message_id }
       );
-      await bot.sendMessage(msg.chat.id, `Deposit is successfully compeleted`, {
+      bot.sendMessage(msg.chat.id, `Deposit is successfully compeleted`, {
         parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [[{ text: "Return  👈", callback_data: "return" }]],
         },
       });
     } else if (result.status == 201) {
-      await bot.editMessageReplyMarkup(
+      bot.editMessageReplyMarkup(
         { inline_keyboard: [] },
         { chat_id: msg.chat.id, message_id: msg.message_id }
       );
-      await bot.sendMessage(
+      bot.sendMessage(
         msg.chat.id,
         `
   Deposit failed.
@@ -240,11 +241,11 @@ export const inputToken_txSignature = async (msg: any) => {
         }
       );
     } else if (result.status == 202) {
-      await bot.editMessageReplyMarkup(
+      bot.editMessageReplyMarkup(
         { inline_keyboard: [] },
         { chat_id: msg.chat.id, message_id: msg.message_id }
       );
-      await bot.sendMessage(
+      bot.sendMessage(
         msg.chat.id,
         `
   Token exist already.
@@ -270,11 +271,11 @@ export const depositSolHandler = async (
   walletPublicKey: string
 ) => {
   try {
-    await bot.editMessageReplyMarkup(
+    bot.editMessageReplyMarkup(
       { inline_keyboard: [] },
       { chat_id: msg.chat.id, message_id: msg.message_id }
     );
-    await bot
+    bot
       .sendMessage(
         msg.chat.id,
         `
@@ -290,7 +291,7 @@ Please deposit to the following address and send <i>tx</i> link.
         }
       )
       .then(async (sentMessage) => {
-        await bot.onReplyToMessage(
+        bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -335,7 +336,7 @@ Please deposit to the following address and send <i>tx</i> link.
                 walletPublicKey
               )) as number;
               if (solAmount > fee) {
-                await bot.sendMessage(
+                bot.sendMessage(
                   msg.chat.id,
                   `
 <b>Deposit is completed.</b>
@@ -380,7 +381,7 @@ const isValidtxSignature = async (
         }
       )
       .then(async (sentMessage) => {
-        await bot.onReplyToMessage(
+        bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -422,7 +423,7 @@ const isValidtxSignature = async (
                     tokenInfo: config.solTokenAddress,
                     userId: msg.chat.id,
                   };
-                  await bot.sendMessage(
+                  bot.sendMessage(
                     msg.chat.id,
                     `
 <b>Please check again.</b>
@@ -472,7 +473,7 @@ ${txSignature}`,
                         tokenInfo: tokenAddress,
                         userId: msg.chat.id,
                       };
-                      await bot.sendMessage(
+                      bot.sendMessage(
                         msg.chat.id,
                         `
 <b>Please check again.</b>
@@ -494,7 +495,7 @@ ${txSignature}`,
                       );
                     }
                   } else {
-                    await bot.sendMessage(
+                    bot.sendMessage(
                       msg.chat.id,
                       `
 <b>Failed to deposit.</b>
@@ -510,7 +511,7 @@ ${txSignature}`,
                     );
                   }
                 } else {
-                  await bot.sendMessage(
+                  bot.sendMessage(
                     msg.chat.id,
                     `
                             <b>Failed to deposit.</b>
@@ -554,7 +555,7 @@ Please input the valid tx link.`,
         }
       )
       .then(async (sentMessage) => {
-        await bot.onReplyToMessage(
+        bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -599,7 +600,7 @@ Please input the valid tx link.`,
                 walletPublicKey
               )) as number;
               if (solAmount > config.minimumAmount) {
-                await bot.sendMessage(
+                bot.sendMessage(
                   msg.chat.id,
                   `
 <b>Deposit is completed.</b>

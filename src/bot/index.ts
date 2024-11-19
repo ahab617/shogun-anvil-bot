@@ -1,8 +1,8 @@
-import TelegramBot from "node-telegram-bot-api";
 import fs from "fs";
 import path from "path";
-import { callBackHandler } from "./callback";
 import config from "../config.json";
+import { callBackHandler } from "./callback";
+import TelegramBot from "node-telegram-bot-api";
 import { removeAnswerCallback } from "./library";
 
 let TOKEN = config.TOKEN;
