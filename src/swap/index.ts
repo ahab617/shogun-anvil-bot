@@ -3,7 +3,6 @@ import { apiSwap } from "./swap";
 import config from "../config.json";
 import swapInfoController from "../controller/swap";
 import depositController from "../controller/deposit";
-import { depositSolHandler } from "./callback/deposit";
 import { convertTokenAmount } from "../service/getTokenPrice";
 import { checkSolBalance, checkSplTokenBalance } from "../service/getBalance";
 
@@ -38,8 +37,10 @@ const executeSwap = async (userList: any) => {
   try {
     if (buyProgress < buy && flag) {
       if (baseToken === config.solTokenAddress) {
-        const currentSolBalance =
-          (await checkSolBalance(swapDetails[0].publicKey)) || 0;
+        const currentSolBalance = (await checkSolBalance(
+          swapDetails[0].publicKey
+        )) as any;
+        if (currentSolBalance === undefined) return;
         if (currentSolBalance >= amount + config.networkFee) {
           const result = await apiSwap(
             Number(amount),
@@ -48,7 +49,7 @@ const executeSwap = async (userList: any) => {
             quoteToken,
             swapDetails[0].privateKey
           );
-          if (result?.status == 200) {
+          if (result?.status == 200 && result?.txId) {
             bot.sendMessage(
               userId,
               `
@@ -97,9 +98,11 @@ Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
           }
         }
       } else {
-        const currentTokenBalance =
-          (await checkSplTokenBalance(baseToken, swapDetails[0].publicKey)) ||
-          0;
+        const currentTokenBalance = (await checkSplTokenBalance(
+          baseToken,
+          swapDetails[0].publicKey
+        )) as any;
+        if (currentTokenBalance === undefined) return;
         if (currentTokenBalance >= amount) {
           const result = await apiSwap(
             Number(amount),
@@ -108,7 +111,7 @@ Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
             quoteToken,
             swapDetails[0].privateKey
           );
-          if (result?.status == 200) {
+          if (result?.status == 200 && result?.txId) {
             bot.sendMessage(
               userId,
               `
@@ -158,11 +161,17 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
         }
       }
     } else if (sellProgress < sell && !flag) {
-      const currentTokenBalance =
-        (await checkSplTokenBalance(quoteToken, swapDetails[0].publicKey)) || 0;
-
-      const amount1 =
-        (await convertTokenAmount(amount, baseToken, quoteToken)) || 0;
+      const currentTokenBalance = (await checkSplTokenBalance(
+        quoteToken,
+        swapDetails[0].publicKey
+      )) as any;
+      if (currentTokenBalance === undefined) return;
+      const amount1 = (await convertTokenAmount(
+        amount,
+        baseToken,
+        quoteToken
+      )) as any;
+      if (amount1 === undefined) return;
       if (amount1 > currentTokenBalance || currentTokenBalance == 0) {
         if (isBalance) {
           const realAmount = Math.floor(amount1);
@@ -184,7 +193,7 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
           baseToken,
           swapDetails[0].privateKey
         );
-        if (result?.status == 200) {
+        if (result?.status == 200 && result?.txId) {
           bot.sendMessage(
             userId,
             `
@@ -231,7 +240,6 @@ const processSwap = async (interval: number) => {
       timeAmount = 0;
     }
     timeAmount += interval;
-    console.log(timeAmount);
     const swapInfo = await swapInfoController.swapInfo();
     if (swapInfo?.data.length > 0) {
       for (let i = 0; i < swapInfo.data.length; i++) {

@@ -76,7 +76,7 @@ export const depositHandler = async (msg: any) => {
           if (depositData?.length <= 0) {
             bot.sendMessage(
               msg.chat.id,
-              `You can't deposit now. Please contact the admin.`
+              `You have not been Whitelisted please contact Admin.`
             );
             return;
           }

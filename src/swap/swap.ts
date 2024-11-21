@@ -57,7 +57,7 @@ export const apiSwap = async (
     const amount = new Decimal(inputAmount)
       .mul(Math.pow(10, baseDecimal))
       .toFixed(0);
-    const slippage = 50; // in percent, for this example, 0.5 means 0.5%
+    const slippage = 1; // in percent, for this example, 0.5 means 0.5%
     const txVersion: string = "V0"; // or LEGACY
     const isV0Tx = txVersion === "V0";
 
@@ -81,7 +81,6 @@ export const apiSwap = async (
         inputAmount: inputAmount,
       };
     }
-
     const { data } = await axios.get<{
       id: string;
       success: boolean;
@@ -102,7 +101,7 @@ export const apiSwap = async (
       success: boolean;
       data: { transaction: string }[];
     }>(`${API_URLS.SWAP_HOST}/transaction/swap-base-in`, {
-      computeUnitPriceMicroLamports: String(data.data.default.h),
+      computeUnitPriceMicroLamports: String(data.data.default.m),
       swapResponse,
       txVersion,
       wallet: owner.publicKey.toBase58(),
@@ -121,7 +120,6 @@ export const apiSwap = async (
     const allTransactions = allTxBuf.map((txBuf) =>
       isV0Tx ? VersionedTransaction.deserialize(txBuf) : Transaction.from(txBuf)
     );
-
     let idx = 0;
     if (!isV0Tx) {
       for (const tx of allTransactions) {
@@ -148,12 +146,12 @@ export const apiSwap = async (
           const txId = await connection.sendTransaction(transaction, {
             skipPreflight: true,
           });
-          const { lastValidBlockHeight, blockhash } =
-            await connection.getLatestBlockhash({ commitment: "finalized" });
-          await connection.confirmTransaction(
-            { blockhash, lastValidBlockHeight, signature: txId },
-            "confirmed"
-          );
+          // const { lastValidBlockHeight, blockhash } =
+          //   await connection.getLatestBlockhash({ commitment: "finalized" });
+          // await connection.confirmTransaction(
+          //   { blockhash, lastValidBlockHeight, signature: txId },
+          //   "confirmed"
+          // );
           return { status: 200, txId: txId };
         } catch (error) {
           return { status: 403, msg: `Error sending transaction: ${error}` };

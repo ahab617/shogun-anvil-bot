@@ -7,11 +7,6 @@ const connection = new Connection(config.rpcUrl);
 export const checkSolBalance = async (addr: string) => {
   try {
     const publickey = new PublicKey(addr);
-    console.log(publickey, "11111111111111111111111");
-    console.log(
-      await connection.getBalance(publickey),
-      "222222222222222222222222"
-    );
     const balance = (await connection.getBalance(publickey)) / 1e9;
 
     return balance;
