@@ -146,13 +146,17 @@ export const apiSwap = async (
           const txId = await connection.sendTransaction(transaction, {
             skipPreflight: true,
           });
-          // const { lastValidBlockHeight, blockhash } =
-          //   await connection.getLatestBlockhash({ commitment: "finalized" });
-          // await connection.confirmTransaction(
-          //   { blockhash, lastValidBlockHeight, signature: txId },
-          //   "confirmed"
-          // );
-          return { status: 200, txId: txId };
+          const { lastValidBlockHeight, blockhash } =
+            await connection.getLatestBlockhash({ commitment: "finalized" });
+          const r = await connection.confirmTransaction(
+            { blockhash, lastValidBlockHeight, signature: txId },
+            "finalized"
+          );
+          if (r) {
+            return { status: 200, txId: txId };
+          } else {
+            return { status: 403, msg: `Error sending transaction` };
+          }
         } catch (error) {
           return { status: 403, msg: `Error sending transaction: ${error}` };
         }
