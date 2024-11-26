@@ -16,16 +16,19 @@ const ALGORITHM = "aes-256-gcm";
 const ENCRYPTION_KEY = config.salt;
 const IV_LENGTH = 12;
 const connection = new Connection(config.rpcUrl);
+export let isDepositStatus = false;
 
 export const withdrawService = async (withInfo: any) => {
   try {
     const privatekey = (await decryptPrivateKey(withInfo.privateKey)) as string;
     if (withInfo.token === config.solTokenAddress) {
+      console.log(withInfo, "999999999999999999");
       const r = await sendSol(
         withInfo.amount,
         withInfo.withdrawAddress,
         privatekey
       );
+      console.log(r, "rrrrrrrrrrrrrrrrrrrrrrr");
       if (r) {
         bot.sendMessage(
           withInfo.userId,
@@ -260,4 +263,8 @@ export const decryptPrivateKey = (encryptedPrivateKey: string) => {
   } catch (error) {
     console.log("decryptPrivateKeyError: ", error);
   }
+};
+
+export const depositTraker = async (flag: boolean) => {
+  isDepositStatus = flag;
 };

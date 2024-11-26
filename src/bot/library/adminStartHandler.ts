@@ -155,8 +155,6 @@ bot.on("message", async (msg: any) => {
           await adminValidatorModal(msg);
         }
       }
-    } else {
-      await alertModal(msg);
     }
   }
 });
@@ -381,23 +379,6 @@ const settingShowModal = async (msg: any) => {
     });
   } catch (error) {
     console.log("SettingShowModal in adminStartHandler: ", error);
-  }
-};
-
-const alertModal = async (msg: any) => {
-  try {
-    deleteMessage(msg);
-    const baseOption = await generateCallbackOption(msg, "HTML");
-    const opts = { ...baseOption };
-    bot.sendMessage(
-      msg.chat.id,
-      `
-      <b>You aren't SuperAdmin.</b>
-      `,
-      opts as SendMessageOptions
-    );
-  } catch (error) {
-    console.log("AlertModal in adminStartHandler: ", error);
   }
 };
 

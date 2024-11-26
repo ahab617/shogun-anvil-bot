@@ -5,6 +5,7 @@ import swapInfoController from "../controller/swap";
 import depositController from "../controller/deposit";
 import { convertTokenAmount } from "../service/getTokenPrice";
 import { checkSolBalance, checkSplTokenBalance } from "../service/getBalance";
+import { depositTraker } from "../service";
 
 const cron = require("node-cron");
 let timeAmount = 0;
@@ -63,6 +64,7 @@ Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
               tokenInfo: quoteToken,
             };
             await depositController.create(depositToken);
+            await depositTraker(true);
             const newBuyProgress = buyProgress + 1;
             let swapInfoUpdate = null;
             if (buy == newBuyProgress) {
@@ -125,6 +127,7 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
               tokenInfo: quoteToken,
             };
             await depositController.create(depositToken);
+            await depositTraker(true);
             const newBuyProgress = buyProgress + 1;
             let swapInfoUpdate = null;
             if (buy == newBuyProgress) {
@@ -204,6 +207,7 @@ Reverse swap for ${Number(
 <a href="${config.solScanUrl}/${result.txId}">View on Solscan</a>`,
             { parse_mode: "HTML" }
           );
+          await depositTraker(true);
           const newSellProgress = sellProgress + 1;
           let swapInfoUpdate = null;
           if (sell == newSellProgress) {

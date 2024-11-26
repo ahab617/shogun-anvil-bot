@@ -1,11 +1,11 @@
 import { bot } from "../index";
 import config from "../../config.json";
 import { removeAnswerCallback } from "./index";
-import { withdrawService } from "../../service";
 import walletController from "../../controller/wallet";
 import depositController from "../../controller/deposit";
 import adminSetting from "../../controller/adminSetting";
 import tokenController from "../../controller/tokenSetting";
+import userList from "../../controller/userList";
 
 export let tokenDepositInfo = {} as any;
 
@@ -33,6 +33,7 @@ interface TdepositData {
 
 let userWalletAddress: TuserWalletAddress | null;
 let depositData: Array<TdepositData> | [];
+let userData: any = null;
 
 export const depositHandler = async (msg: any) => {
   try {
@@ -71,20 +72,20 @@ export const depositHandler = async (msg: any) => {
           );
         } else {
           const result = await adminSetting.find();
+          userData = await userList.findOne({ userId: msg.chat.id });
           depositData = result?.result as Array<TdepositData>;
 
-          if (depositData?.length <= 0) {
+          if (depositData?.length <= 0 || !userData?.permission) {
             bot.sendMessage(
               msg.chat.id,
               `You have not been Whitelisted please contact Admin.`
             );
             return;
           }
-
           const newText =
             `Please deposit to the following address and send <i>txID</i> link.\n\n` +
             `<b>MiniAmount: </b> ${depositData[0].miniAmount}  SOL\n` +
-            `<b>Fee: </b> ${depositData[0].fee}  %\n` +
+            `<b>Fee: </b> ${userData?.fee}  %\n` +
             `The management is not responsible for any consequences resulting from non-compliance with these regulations.\n\n` +
             `<code>${user.publicKey}</code>`;
 
@@ -151,25 +152,6 @@ export const depositHandler = async (msg: any) => {
                             ) {
                               const InputAmount = parsed.info.lamports / 1e9;
 
-                              if (
-                                Number(depositData[0].miniAmount) >
-                                Number(InputAmount)
-                              ) {
-                                bot.sendMessage(
-                                  msg.chat.id,
-                                  `You have not complied with our regulations.\n\nWe will not be held responsible for this.`
-                                );
-                                const withdrawInfo = {
-                                  userId: msg.chat.id,
-                                  withdrawAddress: config.adminWalletAddress,
-                                  token: config.solTokenAddress,
-                                  amount: InputAmount,
-                                  privateKey: userWalletAddress?.privateKey,
-                                } as TwithdrawInfo;
-                                await withdrawService(withdrawInfo);
-                                return;
-                              }
-
                               tokenDepositInfo = {
                                 tokenInfo: config.solTokenAddress,
                                 userId: msg.chat.id,
@@ -230,17 +212,6 @@ export const depositHandler = async (msg: any) => {
 
 export const confirm_txSignatureHandler = async (msg: any, action?: string) => {
   try {
-    if (tokenDepositInfo.tokenInfo == config.solTokenAddress) {
-      const InputAmount = Number(action?.split("_")[2]);
-      const withdrawInfo = {
-        userId: msg.chat.id,
-        withdrawAddress: config.adminWalletAddress,
-        token: config.solTokenAddress,
-        amount: (InputAmount * depositData[0].fee) / 100,
-        privateKey: userWalletAddress?.privateKey,
-      } as TwithdrawInfo;
-      await withdrawService(withdrawInfo);
-    }
     const result = await depositController.create(tokenDepositInfo);
     if (result.status == 200) {
       bot.editMessageReplyMarkup(
@@ -342,23 +313,6 @@ const isValidtxSignature = async (msg: any, publicKey: string) => {
 
                   if (publicKey === receiverAddress) {
                     const InputAmount = parsed.info.lamports / 1e9;
-
-                    if (
-                      Number(depositData[0].miniAmount) > Number(InputAmount)
-                    ) {
-                      const newText = `You have not complied with our regulations.\n\nWe will not be held responsible for this.`;
-                      bot.sendMessage(msg.chat.id, newText, {});
-
-                      const withdrawInfo = {
-                        userId: msg.chat.id,
-                        withdrawAddress: config.adminWalletAddress,
-                        token: config.solTokenAddress,
-                        amount: InputAmount,
-                        privateKey: userWalletAddress?.privateKey,
-                      } as TwithdrawInfo;
-                      await withdrawService(withdrawInfo);
-                      return;
-                    }
 
                     tokenDepositInfo = {
                       tokenInfo: config.solTokenAddress,
