@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { decryptPrivateKey } from "../service";
 
 export const connectDatabase = async (mongoUrl: string) => {
   try {

@@ -144,7 +144,7 @@ export const withdrawSelectHandler = async (msg: any, action: string | any) => {
       (await balanceAmount.filter(
         (item: any) => item.token === config.solTokenAddress
       )[0]?.balance) || "0";
-    if (Number(solBalance) < config.networkFee) {
+    if (Number(solBalance) < config.withdrawFee) {
       bot.sendMessage(
         msg.chat.id,
         `
@@ -330,7 +330,7 @@ const selectInputForm = async (
       msg.chat.id,
       `
   <b>Current Balance: </b> ${balance}
-  <b>Network Fee: </b> ${config.networkFee} SOL
+  <b>Network Fee: </b> ${config.withdrawFee} SOL
   `,
       {
         parse_mode: "HTML",
@@ -384,7 +384,7 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
         userId: msg.chat.id,
         withdrawAddress: userWalletAddress,
         token: tokenAddress,
-        amount: balance - config.networkFee,
+        amount: balance - config.withdrawFee,
         privateKey: userBotWalletPrivateKey,
       } as TwithdrawInfo;
     } else {

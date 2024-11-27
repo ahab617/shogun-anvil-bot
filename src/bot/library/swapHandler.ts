@@ -243,16 +243,82 @@ Please set the token to swap
           }
         } else if (action?.startsWith("stop_swap")) {
           const r = {
-            userId: swapInfo.data.userId,
+            userId: swapTokenInfo.data.userId,
             active: false,
           };
           await swapController.updateOne(r);
+          bot.deleteMessage(
+            chatId,
+            callbackQuery.message?.message_id as number
+          );
+          bot.sendMessage(
+            chatId,
+            `
+          Swap information already exists.
+<b>BaseToken: </b> ${swapTokenInfo.data.baseToken}
+<b>Name: </b>  ${swapTokenInfo.data.baseName}
+<b>Symbol: </b>  ${swapTokenInfo.data.baseSymbol}
+
+<b>QuoteToken: </b> ${swapTokenInfo.data.quoteToken}
+<b>Name: </b>  ${swapTokenInfo.data.quoteName}
+<b>Symbol: </b>  ${swapTokenInfo.data.quoteSymbol}
+
+<b>Swap Amount:: </b> ${swapTokenInfo.data.amount} 
+<b>LoopTime: </b> ${swapTokenInfo.data.loopTime} mins
+<b>Buy times: </b> ${swapTokenInfo.data.buy} 
+<b>Sell times: </b> ${swapTokenInfo.data.sell}`,
+            {
+              parse_mode: "HTML",
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "Active", callback_data: "active_swap" }],
+                  [
+                    { text: "👈 Return", callback_data: "return" },
+                    { text: "Reset ", callback_data: "delete_swap" },
+                  ],
+                ],
+              },
+            }
+          );
         } else if (action?.startsWith("active_swap")) {
           const r = {
-            userId: swapInfo.data.userId,
+            userId: swapTokenInfo.data.userId,
             active: true,
           };
           await swapController.updateOne(r);
+          bot.deleteMessage(
+            chatId,
+            callbackQuery.message?.message_id as number
+          );
+          bot.sendMessage(
+            chatId,
+            `
+          Swap information already exists.
+<b>BaseToken: </b> ${swapTokenInfo.data.baseToken}
+<b>Name: </b>  ${swapTokenInfo.data.baseName}
+<b>Symbol: </b>  ${swapTokenInfo.data.baseSymbol}
+
+<b>QuoteToken: </b> ${swapTokenInfo.data.quoteToken}
+<b>Name: </b>  ${swapTokenInfo.data.quoteName}
+<b>Symbol: </b>  ${swapTokenInfo.data.quoteSymbol}
+
+<b>Swap Amount:: </b> ${swapTokenInfo.data.amount} 
+<b>LoopTime: </b> ${swapTokenInfo.data.loopTime} mins
+<b>Buy times: </b> ${swapTokenInfo.data.buy} 
+<b>Sell times: </b> ${swapTokenInfo.data.sell}`,
+            {
+              parse_mode: "HTML",
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "Stop", callback_data: "stop_swap" }],
+                  [
+                    { text: "👈 Return", callback_data: "return" },
+                    { text: "Reset ", callback_data: "delete_swap" },
+                  ],
+                ],
+              },
+            }
+          );
         }
       });
     } else {

@@ -11,6 +11,15 @@ const findOne = async (props: any) => {
   }
 };
 
+const find = async () => {
+  try {
+    const result = await Tokens.find();
+    return result;
+  } catch (error) {
+    throw new Error("Failed to find tokenSettingInfo");
+  }
+};
+
 const create = async (tokenInfo: any) => {
   try {
     const newToken = new Tokens(tokenInfo);
@@ -43,6 +52,7 @@ const deleteOne = async (props: any) => {
 
 export default {
   findOne,
+  find,
   create,
   deleteOne,
 };

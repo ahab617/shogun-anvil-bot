@@ -24,6 +24,14 @@ const findOne = async (data: any) => {
     throw new Error(`Failed to find userList`);
   }
 };
+const find = async () => {
+  try {
+    const result = await UserList.find();
+    return result;
+  } catch (error) {
+    throw new Error(`Failed to find userList`);
+  }
+};
 
 const updateOne = async (data: any) => {
   try {
@@ -47,4 +55,5 @@ export default {
   create,
   updateOne,
   findOne,
+  find,
 };

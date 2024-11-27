@@ -8,7 +8,6 @@ import adminSetting from "../controller/adminSetting";
 import adminListController from "../controller/adminList";
 import { depositTraker, isDepositStatus } from ".";
 import config from "../config.json";
-
 import userList from "../controller/userList";
 
 interface WalletInfo {
@@ -69,31 +68,50 @@ export class SolWalletTracker {
         publicKey,
         async (accountInfo: AccountInfo<Buffer>) => {
           const userData = await userList.findOne({ userId: wallet.userId });
-          console.log(userData, "1212121212121212121212122");
           const currentBalance = accountInfo.lamports;
-          console.log(walletInfo.previousBalance, "previousBalance");
           const transferredAmount = currentBalance - walletInfo.previousBalance;
-
-          if (!walletInfo.transferredReceived && transferredAmount > 0) {
-            callback?.(wallet, isDepositStatus, transferredAmount / 1e9);
-            walletInfo.transferredReceived = true; // Mark as received
-            this.removeWallet(wallet.userId, wallet.publicKey, subscriptionId); // Optionally remove, based on logic
-          }
 
           // Update the previous balance
           if (isDepositStatus) {
+            if (!walletInfo.transferredReceived && transferredAmount > 0) {
+              callback?.(wallet, isDepositStatus, transferredAmount / 1e9);
+              walletInfo.transferredReceived = true; // Mark as received
+              this.removeWallet(
+                wallet.userId,
+                wallet.publicKey,
+                subscriptionId
+              ); // Optionally remove, based on logic
+            }
             walletInfo.previousBalance = currentBalance;
-            console.log("previousBalance123", walletInfo.previousBalance);
             await depositTraker(false);
           } else {
             const adminList = await adminListController.find();
             if (
               wallet.userId == config.SUPER_ADMIN_ID ||
               adminList?.filter((item: any) => item.userId == wallet.userId)
-                .length > 0
+                .length > 0 ||
+              userData?.fee == 0
             ) {
+              if (!walletInfo.transferredReceived && transferredAmount > 0) {
+                callback?.(wallet, true, transferredAmount / 1e9);
+                walletInfo.transferredReceived = true; // Mark as received
+                this.removeWallet(
+                  wallet.userId,
+                  wallet.publicKey,
+                  subscriptionId
+                ); // Optionally remove, based on logic
+              }
               walletInfo.previousBalance = currentBalance;
             } else {
+              if (!walletInfo.transferredReceived && transferredAmount > 0) {
+                callback?.(wallet, false, transferredAmount / 1e9);
+                walletInfo.transferredReceived = true; // Mark as received
+                this.removeWallet(
+                  wallet.userId,
+                  wallet.publicKey,
+                  subscriptionId
+                ); // Optionally remove, based on logic
+              }
               const result = await adminSetting.find();
               const depositData = result?.result as Array<TdepositData>;
               if (
@@ -104,7 +122,6 @@ export class SolWalletTracker {
                   currentBalance - transferredAmount * userData?.fee;
               }
             }
-            console.log(walletInfo.previousBalance, "22222222222222222222");
           }
         }
       );

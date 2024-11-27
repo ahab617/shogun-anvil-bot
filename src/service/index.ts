@@ -2,11 +2,13 @@ import {
   Connection,
   PublicKey,
   Keypair,
+  VersionedTransaction,
   ParsedAccountData,
 } from "@solana/web3.js";
 import crypto from "crypto";
 import { bot } from "../bot";
 import config from "../config.json";
+import Decimal from "decimal.js";
 import * as Web3 from "@solana/web3.js";
 import { web3 } from "@project-serum/anchor";
 import withdrawController from "../controller/withdraw";
@@ -22,13 +24,11 @@ export const withdrawService = async (withInfo: any) => {
   try {
     const privatekey = (await decryptPrivateKey(withInfo.privateKey)) as string;
     if (withInfo.token === config.solTokenAddress) {
-      console.log(withInfo, "999999999999999999");
       const r = await sendSol(
         withInfo.amount,
         withInfo.withdrawAddress,
         privatekey
       );
-      console.log(r, "rrrrrrrrrrrrrrrrrrrrrrr");
       if (r) {
         bot.sendMessage(
           withInfo.userId,
@@ -113,16 +113,14 @@ const sendSol = async (
     const to = new PublicKey(toAddress);
     const decimals = 9;
     const transferAmountInDecimals = Number(
-      parseFloat((amount * Math.pow(10, decimals)).toString()).toFixed(0)
+      new Decimal(amount).mul(Math.pow(10, decimals)).toFixed(0)
     );
-
     let newNonceTx = new Web3.Transaction();
-    const { blockhash, lastValidBlockHeight } =
-      await connection.getLatestBlockhash();
+    const { lastValidBlockHeight, blockhash } =
+      await connection.getLatestBlockhash({ commitment: "finalized" });
     newNonceTx.feePayer = sender.publicKey;
     newNonceTx.recentBlockhash = blockhash;
     newNonceTx.lastValidBlockHeight = lastValidBlockHeight;
-
     newNonceTx.add(
       Web3.SystemProgram.transfer({
         fromPubkey: sender.publicKey,
@@ -130,12 +128,12 @@ const sendSol = async (
         lamports: transferAmountInDecimals,
       })
     );
-
     const tx = await Web3.sendAndConfirmTransaction(connection, newNonceTx, [
       sender,
     ]);
     return tx;
   } catch (err) {
+    console.log(err);
     return null;
   }
 };
