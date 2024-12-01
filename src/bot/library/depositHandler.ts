@@ -1,4 +1,5 @@
 import { bot } from "../index";
+import { clusterApiUrl } from "@solana/web3.js";
 import config from "../../config.json";
 import { removeAnswerCallback } from "./index";
 import walletController from "../../controller/wallet";
@@ -10,7 +11,10 @@ import userList from "../../controller/userList";
 export let tokenDepositInfo = {} as any;
 
 const { Connection, PublicKey } = require("@solana/web3.js");
-const connection = new Connection(config.rpcUrl);
+const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+  commitment: "confirmed",
+  wsEndpoint: "wss://api.mainnet-beta.solana.com",
+});
 
 interface TwithdrawInfo {
   userId: number;

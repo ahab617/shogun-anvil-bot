@@ -329,8 +329,8 @@ const selectInputForm = async (
     bot.sendMessage(
       msg.chat.id,
       `
-  <b>Current Balance: </b> ${balance}
-  <b>Network Fee: </b> ${config.withdrawFee} SOL
+<b>Current Balance: </b> ${balance}
+<b>Network Fee: </b> ${config.withdrawFee} SOL
   `,
       {
         parse_mode: "HTML",
@@ -399,10 +399,10 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
     bot.sendMessage(
       msg.chat.id,
       `
-  <b>To: </b> <code>${userWalletAddress}</code>
-  <b>From: </b> <code>${userBotWalletPublicKey}</code>
-  <b>Token Address: </b>  ${tokenAddress}
-  <b>Amount: </b>  ${withdrawInfo?.amount}`,
+<b>To: </b> <code>${userWalletAddress}</code>
+<b>From: </b> <code>${userBotWalletPublicKey}</code>
+<b>Token Address: </b>  ${tokenAddress}
+<b>Amount: </b>  ${withdrawInfo?.amount}`,
       {
         parse_mode: "HTML",
         reply_markup: {
@@ -454,8 +454,8 @@ export const someWithdrawHandler = async (msg: any, action: string) => {
       .sendMessage(
         msg.chat.id,
         `
-  <b>Input Withdraw amount</b>
-  <b>Current Balance: </b> ${balance}
+<b>Input Withdraw amount</b>
+<b>Current Balance: </b> ${balance}
   `,
         {
           parse_mode: "HTML",
@@ -500,10 +500,10 @@ export const someWithdrawHandler = async (msg: any, action: string) => {
               bot.sendMessage(
                 msg.chat.id,
                 `
-  <b>To: </b> <code>${userWalletAddress}</code>
-  <b>From: </b> <code>${userBotWalletPublicKey}</code>
-  <b>Token Address: </b>  ${tokenAddress}
-  <b>Amount: </b>  ${withdrawAmount}`,
+<b>To: </b> <code>${userWalletAddress}</code>
+<b>From: </b> <code>${userBotWalletPublicKey}</code>
+<b>Token Address: </b>  ${tokenAddress}
+<b>Amount: </b>  ${withdrawAmount}`,
                 {
                   parse_mode: "HTML",
                   reply_markup: {

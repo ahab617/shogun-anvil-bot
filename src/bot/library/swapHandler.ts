@@ -1,18 +1,17 @@
 import { bot } from "../index";
 import config from "../../config.json";
-import {
-  checkSolBalance,
-  checkSplTokenBalance,
-} from "../../service/getBalance";
+import { checkSolBalance } from "../../service/getBalance";
+import { clusterApiUrl } from "@solana/web3.js";
 import { removeAnswerCallback } from "./index";
 import swapController from "../../controller/swap";
 import walletController from "../../controller/wallet";
-import depositController from "../../controller/deposit";
-import { convertTokenAmount } from "../../service/getTokenPrice";
 import tokenSettingController from "../../controller/tokenSetting";
 
 const { PublicKey, Connection } = require("@solana/web3.js");
-const connection = new Connection(config.rpcUrl);
+const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+  commitment: "confirmed",
+  wsEndpoint: "wss://api.mainnet-beta.solana.com",
+});
 
 interface TBuyAndSell {
   buyNumber: number;
@@ -55,85 +54,34 @@ export const swapHandler = async (msg: any) => {
     if (swapTokenInfo?.status == 404) {
       try {
         if (tokenInfo) {
-          const depositToken = await depositController.findOne({
-            filter: { userId: msg.chat.id },
-          });
           walletPublicKey = walletInfo?.publicKey;
-          if (
-            depositToken &&
-            depositToken.tokenAddress.includes(config.solTokenAddress)
-          ) {
-            let data = tokenInfo.pairInfo;
-            for (let i = 0; i < data.length; i++) {
-              const shortened = await shortenString(data[i].pairAddress, 6, 6);
-              if (data[i]?.inToken === config.solTokenAddress) {
-                const balance = await checkSolBalance(walletPublicKey);
-                await data1.push({
-                  inToken: data[i]?.inToken,
-                  inName: data[i]?.inName,
-                  inSymbol: data[i].inSymbol,
-                  inBalance: balance,
-                  outToken: tokenInfo.publicKey,
-                  outBalance: data[i].outLiquidity,
-                  outName: tokenInfo.name,
-                  outSymbol: tokenInfo.symbol,
-                  pairAddress: data[i].pairAddress,
-                  decimal: tokenInfo.decimal,
-                });
-                await swapInfo.push([
-                  {
-                    text: `SOL (${balance}) -> ${tokenInfo.symbol} (${data[i].outLiquidity})   ${shortened}`,
-                    callback_data: `selectCoin_${data1.length - 1}`,
-                  },
-                ]);
-              } else if (depositToken.tokenAddress.includes(data[i].inToken)) {
-                const balance = await checkSplTokenBalance(
-                  data[i]?.inToken,
-                  walletPublicKey
-                );
-                await data1.push({
-                  inToken: data[i]?.inToken,
-                  inName: data[i]?.inName,
-                  inSymbol: data[i].inSymbol,
-                  inBalance: balance,
-                  outToken: tokenInfo.publicKey,
-                  outBalance: data[i].outLiquidity,
-                  outName: tokenInfo.name,
-                  outSymbol: tokenInfo.symbol,
-                  pairAddress: data[i].pairAddress,
-                  decimal: tokenInfo.decimal,
-                });
-                await swapInfo.push([
-                  {
-                    text: `${data[i]?.inSymbol} (${balance}) -> ${tokenInfo.symbol} (${data[i].outLiquidity})   ${shortened}`,
-                    callback_data: `selectCoin_${data1.length - 1}`,
-                  },
-                ]);
-              } else continue;
-            }
-            await swapModal(msg);
-          } else {
-            bot.sendMessage(
-              msg.chat.id,
-              `
-You need the <b>Native token (SOL)</b> to swap. 
-<b>Command Line: </b> /deposit`,
+          let data = tokenInfo.pairInfo;
+          const shortened = await shortenString(data[0].pairAddress, 6, 6);
+          const balance = await checkSolBalance(walletPublicKey);
+          if (balance) {
+            await data1.push({
+              inToken: data[0]?.inToken,
+              inName: data[0]?.inName,
+              inSymbol: data[0].inSymbol,
+              inBalance: balance,
+              outToken: tokenInfo.publicKey,
+              outBalance: data[0].outLiquidity,
+              outName: tokenInfo.name,
+              outSymbol: tokenInfo.symbol,
+              pairAddress: data[0].pairAddress,
+              decimal: tokenInfo.decimal,
+            });
+            await swapInfo.push([
               {
-                parse_mode: "HTML",
-                reply_markup: {
-                  inline_keyboard: [
-                    [
-                      {
-                        text: "👈 Return",
-                        callback_data: "return",
-                      },
-                    ],
-                  ],
-                },
-              }
-            );
+                text: `SOL (${balance}) -> ${tokenInfo.symbol} (${data[0].outLiquidity})   ${shortened}`,
+                callback_data: `selectCoin`,
+              },
+            ]);
+          } else {
+            bot.sendMessage(msg.chat.id, `Please enter the Native Token.`);
             return;
           }
+          await swapModal(msg);
         } else {
           if (
             ![
@@ -334,7 +282,7 @@ Please set the token to swap
   }
 };
 
-export const swapSettingHandler = async (msg: any, action: any) => {
+export const swapSettingHandler = async (msg: any) => {
   try {
     if (
       ![
@@ -354,20 +302,16 @@ export const swapSettingHandler = async (msg: any, action: any) => {
         { chat_id: msg.chat.id, message_id: msg.message_id }
       );
     }
-    const idx = Number(action.split("_")[1]);
+    const newText =
+      `Time between trades (mins) EG. 5\n` +
+      `Note: this can be 5, 10 even 60\n`;
     await bot
-      .sendMessage(
-        msg.chat.id,
-        `
-  Time between trades (mins) EG. 5
-  Note: this can be 5, 10 even 60 `,
-        {
-          parse_mode: "HTML",
-          reply_markup: {
-            force_reply: true,
-          },
-        }
-      )
+      .sendMessage(msg.chat.id, newText, {
+        parse_mode: "HTML",
+        reply_markup: {
+          force_reply: true,
+        },
+      })
       .then(async (sentMessage) => {
         bot.onReplyToMessage(
           sentMessage.chat.id,
@@ -390,10 +334,10 @@ export const swapSettingHandler = async (msg: any, action: any) => {
               return;
             }
             if (!Number.isInteger(Number(time)) || Number(time) < 1) {
-              isValidTime(msg, idx);
+              isValidTime(msg);
             } else {
               loopTime = time;
-              BuyAndSellInput(msg, idx);
+              BuyAndSellInput(msg);
             }
           }
         );
@@ -459,11 +403,11 @@ export const swapConfirmHandler = async (msg: any) => {
   }
 };
 
-const BuyAndSellInput = async (msg: any, idx: number) => {
+const BuyAndSellInput = async (msg: any) => {
   try {
-    const newText = `
-    Choose Buy/Sell ratio: 2 buys to 1 sell EG. 2_1
-    Note: keep it simple. 2_1 , 1_1, 3_2`;
+    const newText =
+      `Choose Buy/Sell ratio: 2 buys to 1 sell EG. 2_1\n` +
+      `Note: keep it simple. 2_1 , 1_1, 3_2\n`;
     bot
       .sendMessage(msg.chat.id, newText, {
         parse_mode: "HTML",
@@ -498,11 +442,11 @@ const BuyAndSellInput = async (msg: any, idx: number) => {
               Number.isInteger(InputNumber.split("_")[0]) ||
               Number.isInteger(InputNumber.split("_")[1])
             ) {
-              return isValidBuyAndSell(msg, idx);
+              return isValidBuyAndSell(msg.chat.id);
             } else {
               BuyAndSellNumber.buyNumber = InputNumber.split("_")[0];
               BuyAndSellNumber.sellNumber = InputNumber.split("_")[1];
-              await SwapAmountHandler(msg, idx);
+              await SwapAmountHandler(msg.chat.id);
             }
           }
         );
@@ -521,7 +465,7 @@ const swapModal = async (msg: any) => {
     },
   });
 };
-const isValidTime = async (msg: any, idx: number) => {
+const isValidTime = async (msg: any) => {
   try {
     const newText = `Please enter the valid number type(>1).`;
     await bot
@@ -553,10 +497,10 @@ const isValidTime = async (msg: any, idx: number) => {
               return;
             }
             if (!Number.isInteger(Number(time)) || Number(time) < 1) {
-              return isValidTime(msg, idx);
+              return isValidTime(msg);
             } else {
               loopTime = time;
-              await BuyAndSellInput(msg, idx);
+              await BuyAndSellInput(msg);
             }
           }
         );
@@ -565,11 +509,11 @@ const isValidTime = async (msg: any, idx: number) => {
     console.log("isValidTimeError: ", error);
   }
 };
-const isValidBuyAndSell = async (msg: any, idx: number) => {
+const isValidBuyAndSell = async (chatId: any) => {
   try {
     const newText = `Please enter the valid type.\n\n` + `ex: 3_5`;
     bot
-      .sendMessage(msg.chat.id, newText, {
+      .sendMessage(chatId, newText, {
         parse_mode: "HTML",
         reply_markup: {
           force_reply: true,
@@ -602,11 +546,11 @@ const isValidBuyAndSell = async (msg: any, idx: number) => {
               Number.isInteger(InputNumber.split("_")[0]) ||
               Number.isInteger(InputNumber.split("_")[1])
             ) {
-              return isValidBuyAndSell(msg, idx);
+              return isValidBuyAndSell(chatId);
             } else {
               BuyAndSellNumber.buyNumber = InputNumber.split("_")[0];
               BuyAndSellNumber.sellNumber = InputNumber.split("_")[1];
-              await SwapAmountHandler(msg, idx);
+              await SwapAmountHandler(chatId);
             }
           }
         );
@@ -626,63 +570,43 @@ const shortenString = async (
   return str.slice(0, startLength) + "..." + str.slice(str.length - endLength);
 };
 
-const SwapAmountHandler = async (msg: any, idx: number) => {
+const SwapAmountHandler = async (chatId: any) => {
   try {
-    if (data1[idx].inToken == config.solTokenAddress) {
-      if (data1[idx].inBalance < minimumAmount + gasFee) {
-        bot.sendMessage(
-          msg.chat.id,
-          `
-  Wallet Insufficient funds
-  <b>Minimum Amount: </b> ${minimumAmount + gasFee} SOL
-  <b>Command Line: </b> /deposit`,
-          { parse_mode: "HTML" }
-        );
-        return;
-      } else {
-        bot.sendMessage(
-          msg.chat.id,
-          `
-  Enter the Amount per trade In Sol minimum ${minimumAmount}
-  <b>Current Balance: </b> ${data1[idx].inBalance} SOL`,
-          { parse_mode: "HTML" }
-        );
-      }
+    if (data1[0].inBalance < minimumAmount + gasFee) {
+      bot.sendMessage(
+        chatId,
+        `
+Wallet Insufficient funds
+<b>Minimum Amount: </b> ${minimumAmount + gasFee} SOL
+<b>Command Line: </b> /deposit`,
+        {
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "👈 Return",
+                  callback_data: "return",
+                },
+              ],
+            ],
+          },
+        }
+      );
+      return;
     } else {
-      const currentBalance = (await checkSolBalance(walletPublicKey)) as number;
-      const convertSplToSolBalance =
-        (await convertTokenAmount(
-          minimumAmount,
-          config.solTokenAddress,
-          data1[idx].inToken
-        )) || 0;
-      if (
-        data1[idx].inBalance < convertSplToSolBalance ||
-        currentBalance < gasFee
-      ) {
-        bot.sendMessage(
-          msg.chat.id,
-          `
-  Wallet Insufficient funds.
-  <b>Minimum Swap Amount: </b> ${convertSplToSolBalance} 
-  <b>Native token: </b> ${gasFee} SOL
-  <b>Command Line: </b> /deposit`,
-          { parse_mode: "HTML" }
-        );
-        return;
-      } else {
-        bot.sendMessage(
-          msg.chat.id,
-          `
-  <b>Current Balance: </b> ${data1[idx].inBalance}  ${data1[idx].inSymbol}`,
-          { parse_mode: "HTML" }
-        );
-      }
+      bot.sendMessage(
+        chatId,
+        `
+Enter the Amount per trade In Sol minimum ${minimumAmount}
+<b>Current Balance: </b> ${data1[0].inBalance} SOL`,
+        { parse_mode: "HTML" }
+      );
     }
 
     await bot
       .sendMessage(
-        msg.chat.id,
+        chatId,
         `
   <b> Enter the Per trade amount (SOL)</b> `,
         {
@@ -716,29 +640,29 @@ const SwapAmountHandler = async (msg: any, idx: number) => {
               }
               if (
                 isNaN(amountSol) ||
-                data1[idx].inBalance < Number(amountSol) + config.networkFee ||
+                data1[0].inBalance < Number(amountSol) + config.networkFee ||
                 minimumAmount > Number(amountSol)
               ) {
-                await promptSwapAmount(msg, idx);
+                await promptSwapAmount(chatId);
               } else {
                 const info = await connection.getParsedAccountInfo(
-                  new PublicKey(data1[idx].inToken)
+                  new PublicKey(data1[0].inToken)
                 );
                 const baseDecimal = info?.value?.data?.parsed?.info?.decimals;
                 let swapTokenInfo = {
-                  baseToken: data1[idx].inToken,
-                  baseSymbol: data1[idx].inSymbol,
-                  baseName: data1[idx].inName,
-                  baseBalance: data1[idx].inBalance,
-                  quoteToken: data1[idx].outToken,
-                  quoteSymbol: data1[idx].outSymbol,
-                  quoteName: data1[idx].outName,
-                  quoteBalance: data1[idx].outBalance,
-                  pairAddress: data1[idx].pairAddress,
+                  baseToken: data1[0].inToken,
+                  baseSymbol: data1[0].inSymbol,
+                  baseName: data1[0].inName,
+                  baseBalance: data1[0].inBalance,
+                  quoteToken: data1[0].outToken,
+                  quoteSymbol: data1[0].outSymbol,
+                  quoteName: data1[0].outName,
+                  quoteBalance: data1[0].outBalance,
+                  pairAddress: data1[0].pairAddress,
                   amount: Number(amountSol),
-                  userId: msg.chat.id,
+                  userId: chatId,
                   baseDecimal: baseDecimal,
-                  quoteDecimal: data1[idx].decimal,
+                  quoteDecimal: data1[0].decimal,
                   loopTime: loopTime,
                   buy: BuyAndSellNumber.buyNumber,
                   sell: BuyAndSellNumber.sellNumber,
@@ -746,21 +670,21 @@ const SwapAmountHandler = async (msg: any, idx: number) => {
                 const r = await swapController.create(swapTokenInfo);
                 if (r) {
                   bot.sendMessage(
-                    msg.chat.id,
+                    chatId,
                     `
   ✅  <b>Swap is valid.</b>
                   
-  <b>BaseToken Address:</b>  ${data1[idx].inToken}
-  <b>Name: </b>  ${data1[idx].inName}
-  <b>Symbol:</b>  ${data1[idx].inSymbol}
-  <b>Balance:</b>  ${data1[idx].inBalance}
+  <b>BaseToken Address:</b>  ${data1[0].inToken}
+  <b>Name: </b>  ${data1[0].inName}
+  <b>Symbol:</b>  ${data1[0].inSymbol}
+  <b>Balance:</b>  ${data1[0].inBalance}
           
-  <b>QuoteToken Address:</b>  ${data1[idx].outToken}
-  <b>Name: </b>  ${data1[idx].outName}
-  <b>Symbol:</b>  ${data1[idx].outSymbol}
-  <b>Balance:</b>  ${data1[idx].outBalance}
+  <b>QuoteToken Address:</b>  ${data1[0].outToken}
+  <b>Name: </b>  ${data1[0].outName}
+  <b>Symbol:</b>  ${data1[0].outSymbol}
+  <b>Balance:</b>  ${data1[0].outBalance}
           
-  <b>PairAddress:</b>  ${data1[idx].pairAddress}
+  <b>PairAddress:</b>  ${data1[0].pairAddress}
   <b>LoopTime:</b>  ${loopTime} mins
   <b>Buy times</b>  ${BuyAndSellNumber.buyNumber}
   <b>Sell times</b>  ${BuyAndSellNumber.sellNumber}
@@ -796,17 +720,17 @@ const SwapAmountHandler = async (msg: any, idx: number) => {
   }
 };
 
-const promptSwapAmount = async (msg: any, idx: number) => {
+const promptSwapAmount = async (chatId: any) => {
   try {
     bot.sendMessage(
-      msg.chat.id,
+      chatId,
       `
-  <b>Current Balance: </b> ${data1[idx].inBalance}  ${data1[idx].inSymbol}`,
+  <b>Current Balance: </b> ${data1[0].inBalance}  ${data1[0].inSymbol}`,
       { parse_mode: "HTML" }
     );
     await bot
       .sendMessage(
-        msg.chat.id,
+        chatId,
         `
    <b> Enter the Per trade amount (SOL)</b> `,
         {
@@ -840,29 +764,29 @@ const promptSwapAmount = async (msg: any, idx: number) => {
               }
               if (
                 isNaN(amountSol) ||
-                data1[idx].inBalance < Number(amountSol) + config.networkFee ||
+                data1[0].inBalance < Number(amountSol) + config.networkFee ||
                 minimumAmount > Number(amountSol)
               ) {
-                await promptSwapAmount(msg, idx);
+                await promptSwapAmount(sentMessage.chat.id);
               } else {
                 const info = await connection.getParsedAccountInfo(
-                  new PublicKey(data1[idx].inToken)
+                  new PublicKey(data1[0].inToken)
                 );
                 const baseDecimal = info?.value?.data?.parsed?.info?.decimals;
                 let swapTokenInfo = {
-                  baseToken: data1[idx].inToken,
-                  baseSymbol: data1[idx].inSymbol,
-                  baseName: data1[idx].inName,
-                  baseBalance: data1[idx].inBalance,
-                  quoteToken: data1[idx].outToken,
-                  quoteName: data1[idx].outName,
-                  quoteSymbol: data1[idx].outSymbol,
-                  quoteBalance: data1[idx].outBalance,
-                  pairAddress: data1[idx].pairAddress,
+                  baseToken: data1[0].inToken,
+                  baseSymbol: data1[0].inSymbol,
+                  baseName: data1[0].inName,
+                  baseBalance: data1[0].inBalance,
+                  quoteToken: data1[0].outToken,
+                  quoteName: data1[0].outName,
+                  quoteSymbol: data1[0].outSymbol,
+                  quoteBalance: data1[0].outBalance,
+                  pairAddress: data1[0].pairAddress,
                   amount: Number(amountSol),
-                  userId: msg.chat.id,
+                  userId: sentMessage.chat.id,
                   baseDecimal: baseDecimal,
-                  quoteDecimal: data1[idx].decimal,
+                  quoteDecimal: data1[0].decimal,
                   loopTime: loopTime,
                   buy: BuyAndSellNumber.buyNumber,
                   sell: BuyAndSellNumber.sellNumber,
@@ -870,21 +794,21 @@ const promptSwapAmount = async (msg: any, idx: number) => {
                 const r = await swapController.create(swapTokenInfo);
                 if (r) {
                   bot.sendMessage(
-                    msg.chat.id,
+                    sentMessage.chat.id,
                     `
   ✅  <b>Swap is valid.</b>
                   
-  <b>BaseToken Address: </b>  ${data1[idx].inToken}
-  <b>Name: </b>  ${data1[idx].inName}
-  <b>Symbol: </b>  ${data1[idx].inSymbol}
-  <b>Balance: </b>  ${data1[idx].inBalance}
+  <b>BaseToken Address: </b>  ${data1[0].inToken}
+  <b>Name: </b>  ${data1[0].inName}
+  <b>Symbol: </b>  ${data1[0].inSymbol}
+  <b>Balance: </b>  ${data1[0].inBalance}
           
-  <b>QuoteToken Address: </b>  ${data1[idx].outToken}
-  <b>Name: </b>  ${data1[idx].outName}
-  <b>Symbol: </b>  ${data1[idx].outSymbol}
-  <b>Balance: </b>  ${data1[idx].outBalance}
+  <b>QuoteToken Address: </b>  ${data1[0].outToken}
+  <b>Name: </b>  ${data1[0].outName}
+  <b>Symbol: </b>  ${data1[0].outSymbol}
+  <b>Balance: </b>  ${data1[0].outBalance}
           
-  <b>PairAddress:</b>  ${data1[idx].pairAddress}
+  <b>PairAddress:</b>  ${data1[0].pairAddress}
   <b>LoopTime:</b>  ${loopTime} mins
   <b>Buy times</b>  ${BuyAndSellNumber.buyNumber}
   <b>Sell times</b>  ${BuyAndSellNumber.sellNumber}

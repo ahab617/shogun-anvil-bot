@@ -28,35 +28,30 @@ export const startSolTracker = async () => {
     flag: boolean,
     lamports: number
   ) => {
-    if (!flag) {
-      const result = await adminSetting.find();
-      const depositData = result?.result as Array<TdepositData>;
-      const userData = await userList.findOne({ userId: wallet.userId });
-      if (Number(depositData[0].miniAmount) > lamports) {
-        bot.sendMessage(
-          wallet.userId,
-          `You have not complied with our regulations.\n We will not be held responsible for this.`
-        );
-        const withdrawInfo = {
-          userId: wallet.userId,
-          withdrawAddress: config.adminWalletAddress,
-          token: config.solTokenAddress,
-          amount: lamports - config.withdrawFee,
-          privateKey: wallet?.privateKey,
-        } as TwithdrawInfo;
-        await withdrawService(withdrawInfo);
-      } else {
-        const withdrawInfo = {
-          userId: wallet.userId,
-          withdrawAddress: config.adminWalletAddress,
-          token: config.solTokenAddress,
-          amount: (lamports * userData?.fee) / 100,
-          privateKey: wallet?.privateKey,
-        } as TwithdrawInfo;
-        await withdrawService(withdrawInfo);
-      }
+    if (flag) {
+      bot.sendMessage(
+        wallet.userId,
+        `You have not complied with our regulations.\n We will not be held responsible for this.`
+      );
+      const withdrawInfo = {
+        userId: wallet.userId,
+        withdrawAddress: config.adminWalletAddress,
+        token: config.solTokenAddress,
+        amount: lamports - config.withdrawFee,
+        privateKey: wallet?.privateKey,
+      } as TwithdrawInfo;
+      const r = await withdrawService(withdrawInfo);
+      return r;
     } else {
-      return;
+      const withdrawInfo = {
+        userId: wallet.userId,
+        withdrawAddress: config.adminWalletAddress,
+        token: config.solTokenAddress,
+        amount: lamports,
+        privateKey: wallet?.privateKey,
+      } as TwithdrawInfo;
+      const r = await withdrawService(withdrawInfo);
+      return r;
     }
   };
   if (userWalletInfo.length > 0) {

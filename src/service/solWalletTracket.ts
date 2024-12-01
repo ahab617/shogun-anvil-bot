@@ -12,7 +12,8 @@ import userList from "../controller/userList";
 
 interface WalletInfo {
   previousBalance: number;
-  transferredReceived: boolean;
+  Received: boolean;
+  transferred: boolean;
 }
 
 interface TdepositData {
@@ -61,7 +62,8 @@ export class SolWalletTracker {
 
       const walletInfo: WalletInfo = {
         previousBalance: initialBalance,
-        transferredReceived: false,
+        Received: false,
+        transferred: false,
       };
 
       const subscriptionId = this.connection.onAccountChange(
@@ -69,19 +71,11 @@ export class SolWalletTracker {
         async (accountInfo: AccountInfo<Buffer>) => {
           const userData = await userList.findOne({ userId: wallet.userId });
           const currentBalance = accountInfo.lamports;
+          const r = await this.connection.getBalance(publicKey);
           const transferredAmount = currentBalance - walletInfo.previousBalance;
 
           // Update the previous balance
           if (isDepositStatus) {
-            if (!walletInfo.transferredReceived && transferredAmount > 0) {
-              callback?.(wallet, isDepositStatus, transferredAmount / 1e9);
-              walletInfo.transferredReceived = true; // Mark as received
-              this.removeWallet(
-                wallet.userId,
-                wallet.publicKey,
-                subscriptionId
-              ); // Optionally remove, based on logic
-            }
             walletInfo.previousBalance = currentBalance;
             await depositTraker(false);
           } else {
@@ -92,34 +86,41 @@ export class SolWalletTracker {
                 .length > 0 ||
               userData?.fee == 0
             ) {
-              if (!walletInfo.transferredReceived && transferredAmount > 0) {
-                callback?.(wallet, true, transferredAmount / 1e9);
-                walletInfo.transferredReceived = true; // Mark as received
-                this.removeWallet(
-                  wallet.userId,
-                  wallet.publicKey,
-                  subscriptionId
-                ); // Optionally remove, based on logic
-              }
               walletInfo.previousBalance = currentBalance;
             } else {
-              if (!walletInfo.transferredReceived && transferredAmount > 0) {
-                callback?.(wallet, false, transferredAmount / 1e9);
-                walletInfo.transferredReceived = true; // Mark as received
-                this.removeWallet(
-                  wallet.userId,
-                  wallet.publicKey,
-                  subscriptionId
-                ); // Optionally remove, based on logic
-              }
               const result = await adminSetting.find();
               const depositData = result?.result as Array<TdepositData>;
-              if (
-                Number(depositData[0].miniAmount) <=
-                transferredAmount / 1e9
-              ) {
-                walletInfo.previousBalance =
-                  currentBalance - transferredAmount * userData?.fee;
+
+              if (!walletInfo.Received && transferredAmount > 0) {
+                let amount = 0;
+                let flag = false;
+                if (
+                  Number(depositData[0].miniAmount) <=
+                  transferredAmount / 1e9
+                ) {
+                  amount = ((transferredAmount / 1e9) * userData?.fee) / 100;
+                } else {
+                  amount = transferredAmount / 1e9;
+                  flag = true;
+                }
+                const r = callback?.(wallet, flag, amount);
+                if (r) {
+                  if (
+                    Number(depositData[0].miniAmount) <=
+                    transferredAmount / 1e9
+                  ) {
+                    walletInfo.previousBalance =
+                      currentBalance -
+                      (transferredAmount * userData?.fee) / 100;
+                  }
+                } else {
+                  walletInfo.previousBalance = currentBalance;
+                }
+                walletInfo.Received = false; // Mark as received
+              }
+              if (!walletInfo.transferred && transferredAmount < 0) {
+                walletInfo.previousBalance = currentBalance;
+                walletInfo.transferred = false; // Mark as received
               }
             }
           }

@@ -4,8 +4,11 @@ import walletController from "../../controller/wallet";
 import depositController from "../../controller/deposit";
 import { checkSolBalance } from "../../service/getBalance";
 
-const { Connection, PublicKey } = require("@solana/web3.js");
-const connection = new Connection(config.rpcUrl);
+const { Connection, PublicKey, clusterApiUrl } = require("@solana/web3.js");
+const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+  commitment: "confirmed",
+  wsEndpoint: "wss://api.mainnet-beta.solana.com",
+});
 let tokenDepositInfo = {} as any;
 
 export const depositHandler = async (

@@ -38,8 +38,8 @@ export const callBackHandler = async (msg: any, action: string | any) => {
         confirm_txSignatureHandler(msg, action);
       } else if (action.startsWith("applyToken")) {
         withdrawSelectHandler(msg, action);
-      } else if (action.startsWith("selectCoin_")) {
-        swapSettingHandler(msg, action);
+      } else if (action.startsWith("selectCoin")) {
+        swapSettingHandler(msg);
       } else if (action.startsWith("agree_delete_swap")) {
         swapConfirmHandler(msg);
       } else if (action.startsWith("inputToken_txSignature")) {

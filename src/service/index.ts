@@ -2,13 +2,12 @@ import {
   Connection,
   PublicKey,
   Keypair,
-  VersionedTransaction,
+  clusterApiUrl,
   ParsedAccountData,
 } from "@solana/web3.js";
 import crypto from "crypto";
 import { bot } from "../bot";
 import config from "../config.json";
-import Decimal from "decimal.js";
 import * as Web3 from "@solana/web3.js";
 import { web3 } from "@project-serum/anchor";
 import withdrawController from "../controller/withdraw";
@@ -17,24 +16,27 @@ import { getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
 const ALGORITHM = "aes-256-gcm";
 const ENCRYPTION_KEY = config.salt;
 const IV_LENGTH = 12;
-const connection = new Connection(config.rpcUrl);
+const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+  commitment: "confirmed",
+  wsEndpoint: "wss://api.mainnet-beta.solana.com",
+});
 export let isDepositStatus = false;
 
 export const withdrawService = async (withInfo: any) => {
   try {
     const privatekey = (await decryptPrivateKey(withInfo.privateKey)) as string;
     if (withInfo.token === config.solTokenAddress) {
-      const r = await sendSol(
+      const result = await sendSol(
         withInfo.amount,
         withInfo.withdrawAddress,
         privatekey
       );
-      if (r) {
+      if (result) {
         bot.sendMessage(
           withInfo.userId,
           `
   <b>Please check this.</b>
-  <a href="${config.solScanUrl}/${r}"><i>View on Solscan</i></a>`,
+  <a href="${config.solScanUrl}/${result}"><i>View on Solscan</i></a>`,
           {
             parse_mode: "HTML",
             reply_markup: {
@@ -60,6 +62,7 @@ export const withdrawService = async (withInfo: any) => {
           }
         );
       }
+      return result;
     } else {
       const r = await transferSplToken(
         privatekey,
@@ -111,13 +114,16 @@ const sendSol = async (
   try {
     const sender = (await getKeyPairFromPrivatekey(privatekey)) as any;
     const to = new PublicKey(toAddress);
-    const decimals = 9;
-    const transferAmountInDecimals = Number(
-      new Decimal(amount).mul(Math.pow(10, decimals)).toFixed(0)
-    );
-    let newNonceTx = new Web3.Transaction();
+    const decimals = Web3.LAMPORTS_PER_SOL; // 1 SOL = 1e9 lamports
+    const transferAmountInDecimals = Math.floor(amount * decimals);
+
+    // // Check balance
+    const senderBalance = await connection.getBalance(sender.publicKey);
+
+    // Prepare transaction
     const { lastValidBlockHeight, blockhash } =
       await connection.getLatestBlockhash({ commitment: "finalized" });
+    let newNonceTx = new Web3.Transaction();
     newNonceTx.feePayer = sender.publicKey;
     newNonceTx.recentBlockhash = blockhash;
     newNonceTx.lastValidBlockHeight = lastValidBlockHeight;
@@ -128,12 +134,36 @@ const sendSol = async (
         lamports: transferAmountInDecimals,
       })
     );
-    const tx = await Web3.sendAndConfirmTransaction(connection, newNonceTx, [
-      sender,
-    ]);
-    return tx;
-  } catch (err) {
-    console.log(err);
+
+    try {
+      const tx = await Web3.sendAndConfirmTransaction(connection, newNonceTx, [
+        sender,
+      ]);
+      return tx;
+    } catch (err: any) {
+      if (err instanceof Web3.SendTransactionError) {
+        console.error("Transaction failed:", err.message);
+      }
+
+      // Retry if blockhash expired
+      if (err.message.includes("Blockhash not found")) {
+        console.log("Blockhash expired, retrying...");
+        const { blockhash, lastValidBlockHeight } =
+          await connection.getLatestBlockhash({ commitment: "finalized" });
+        newNonceTx.recentBlockhash = blockhash;
+        newNonceTx.lastValidBlockHeight = lastValidBlockHeight;
+
+        const retryTx = await Web3.sendAndConfirmTransaction(
+          connection,
+          newNonceTx,
+          [sender]
+        );
+        return retryTx;
+      }
+      return null;
+    }
+  } catch (err: any) {
+    console.error("Transaction failed:", err.message || err);
     return null;
   }
 };
