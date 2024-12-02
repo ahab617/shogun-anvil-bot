@@ -31,24 +31,7 @@ export const withdrawService = async (withInfo: any) => {
         withInfo.withdrawAddress,
         privatekey
       );
-      if (result) {
-        bot.sendMessage(
-          withInfo.userId,
-          `
-  <b>Please check this.</b>
-  <a href="${config.solScanUrl}/${result}"><i>View on Solscan</i></a>`,
-          {
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "Return  👈", callback_data: "return" }],
-              ],
-            },
-          }
-        );
-
-        await withdrawController.create(withInfo);
-      } else {
+      if (!result) {
         bot.sendMessage(
           withInfo.userId,
           `Withdraw failed. Please try again later`,
