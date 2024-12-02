@@ -9,6 +9,7 @@ import {
 import { withdrawService } from "../../service";
 import walletController from "../../controller/wallet";
 import depositController from "../../controller/deposit";
+import withdrawController from "../../controller/withdraw";
 import { removeAnswerCallback } from "./index";
 
 interface TwithdrawInfo {
@@ -212,31 +213,6 @@ export const withdrawSelectHandler = async (msg: any, action: string | any) => {
   }
 };
 
-export const applyWithdrawHandler = async (msg: any) => {
-  try {
-    if (
-      ![
-        "/cancel",
-        "/support",
-        "/start",
-        "/wallet",
-        "/token",
-        "/deposit",
-        "/withdraw",
-        "/balance",
-        "/activity",
-      ].includes(msg.text)
-    ) {
-      bot.editMessageReplyMarkup(
-        { inline_keyboard: [] },
-        { chat_id: msg.chat.id, message_id: msg.message_id }
-      );
-    }
-    await withdrawService(withdrawInfo);
-  } catch (error) {
-    console.log("applyWithdrawHandlerError: ", error);
-  }
-};
 const withdrawModal = async (msg: any) => {
   try {
     await tokenAccount.push([{ text: "Return  👈", callback_data: "return" }]);
@@ -423,6 +399,48 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
     );
   } catch (error) {
     console.log("allWithdrawHandlerError: ", error);
+  }
+};
+export const applyWithdrawHandler = async (msg: any) => {
+  try {
+    if (
+      ![
+        "/cancel",
+        "/support",
+        "/start",
+        "/wallet",
+        "/token",
+        "/deposit",
+        "/withdraw",
+        "/balance",
+        "/activity",
+      ].includes(msg.text)
+    ) {
+      bot.editMessageReplyMarkup(
+        { inline_keyboard: [] },
+        { chat_id: msg.chat.id, message_id: msg.message_id }
+      );
+    }
+    const result = await withdrawService(withdrawInfo);
+    if (result) {
+      bot.sendMessage(
+        msg.chat.id,
+        `
+<b>Please check this.</b>
+<a href="${config.solScanUrl}/${result}"><i>View on Solscan</i></a>`,
+        {
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "Return  👈", callback_data: "return" }],
+            ],
+          },
+        }
+      );
+      await withdrawController.create(withdrawInfo);
+    }
+  } catch (error) {
+    console.log("applyWithdrawHandlerError: ", error);
   }
 };
 

@@ -22,8 +22,7 @@ const create = async (tokenInfo: any) => {
       if (tokenExists) {
         return {
           status: 202,
-          message:
-            "Token address already exists. Deposit is completed successfully.",
+          message: "Deposit Is completed.",
         };
       } else {
         userDeposit.tokenAddress.push(tokenInfo.tokenInfo);
