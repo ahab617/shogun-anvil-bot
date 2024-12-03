@@ -43,7 +43,7 @@ export const confirmHandler = async (msg: any) => {
 
     bot.sendMessage(msg.chat.id, `✅ Reset is successfully completed.`);
 
-    await startHandler(msg);
+    startHandler(msg);
   } catch (error) {
     console.log("Error during wallet reset:", error);
   }

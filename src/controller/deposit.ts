@@ -3,6 +3,7 @@ const { Deposit } = require("../db/model");
 const findOne = async (props: any) => {
   const { filter } = props;
   try {
+    console.log("filter: ", filter);
     const result = await Deposit.findOne(filter);
     return result;
   } catch (error) {

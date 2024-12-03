@@ -39,6 +39,6 @@ export default new Commands(
       );
       return;
     }
-    await walletHandler(msg);
+    walletHandler(msg);
   }
 );

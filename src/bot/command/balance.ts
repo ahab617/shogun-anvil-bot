@@ -37,6 +37,6 @@ export default new Commands(
       );
       return;
     }
-    await balanceHandler(msg);
+    balanceHandler(msg);
   }
 );

@@ -30,7 +30,7 @@ export const walletHandler = async (msg: any) => {
       );
       return;
     }
-    await removeAnswerCallback(msg.chat);
+    removeAnswerCallback(msg.chat);
     const user = await walletController.findOne({
       filter: {
         userId: msg.chat.id,

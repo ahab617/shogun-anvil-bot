@@ -37,10 +37,6 @@ export class SolWalletTracker {
     this.walletAddresses = new Map();
   }
 
-  private logBalance(walletAddress: string, balance: number): void {
-    console.log(`Initial balance for ${walletAddress}: ${balance / 1e9} SOL`);
-  }
-
   async addWallet(
     wallet: any,
     callback?: (wallet1: any, isDepositStatus: boolean, amount: number) => void
@@ -57,8 +53,6 @@ export class SolWalletTracker {
         console.error("Failed to obtain initial balance.");
         return;
       }
-
-      this.logBalance(wallet.publicKey, initialBalance);
 
       const walletInfo: WalletInfo = {
         previousBalance: initialBalance,
@@ -77,7 +71,7 @@ export class SolWalletTracker {
           // Update the previous balance
           if (isDepositStatus) {
             walletInfo.previousBalance = currentBalance;
-            await depositTraker(false);
+            depositTraker(false);
           } else {
             const adminList = await adminListController.find();
             if (

@@ -8,8 +8,6 @@ import adminSetting from "../../controller/adminSetting";
 import tokenController from "../../controller/tokenSetting";
 import userList from "../../controller/userList";
 
-export let tokenDepositInfo = {} as any;
-
 const { Connection, PublicKey } = require("@solana/web3.js");
 const connection = new Connection(clusterApiUrl("mainnet-beta"), {
   commitment: "confirmed",
@@ -38,11 +36,11 @@ interface TdepositData {
 let userWalletAddress: TuserWalletAddress | null;
 let depositData: Array<TdepositData> | [];
 let userData: any = null;
+let tokenDepositInfo = {} as any;
 
 export const depositHandler = async (msg: any) => {
   try {
-    await removeAnswerCallback(msg.chat);
-    tokenDepositInfo = {};
+    removeAnswerCallback(msg.chat);
     const user = await walletController.findOne({
       filter: {
         userId: msg.chat.id,
@@ -93,7 +91,7 @@ export const depositHandler = async (msg: any) => {
             `The management is not responsible for any consequences resulting from non-compliance with these regulations.\n\n` +
             `<code>${user.publicKey}</code>`;
 
-          await bot
+          bot
             .sendMessage(msg.chat.id, newText, {
               parse_mode: "HTML",
               reply_markup: { force_reply: true },
@@ -134,7 +132,7 @@ export const depositHandler = async (msg: any) => {
                     );
 
                     if (!tx || !tx.meta || !tx.transaction) {
-                      await isValidtxSignature(msg, user.publicKey);
+                      isValidtxSignature(msg, user.publicKey);
                     } else {
                       // Loop through the instructions to find the receiving address
                       for (const instruction of tx.transaction.message
@@ -156,7 +154,7 @@ export const depositHandler = async (msg: any) => {
                             ) {
                               const InputAmount = parsed.info.lamports / 1e9;
 
-                              tokenDepositInfo = {
+                              tokenDepositInfo[msg.chat.id] = {
                                 tokenInfo: config.solTokenAddress,
                                 userId: msg.chat.id,
                               };
@@ -182,7 +180,7 @@ export const depositHandler = async (msg: any) => {
                                 }
                               );
                             } else {
-                              await isValidtxSignature(msg, user.publicKey);
+                              isValidtxSignature(msg, user.publicKey);
                             }
                           }
                         }
@@ -216,7 +214,9 @@ export const depositHandler = async (msg: any) => {
 
 export const confirm_txSignatureHandler = async (msg: any, action?: string) => {
   try {
-    const result = await depositController.create(tokenDepositInfo);
+    const result = await depositController.create(
+      tokenDepositInfo[msg.chat.id]
+    );
     if (result.status == 200) {
       bot.editMessageReplyMarkup(
         { inline_keyboard: [] },
@@ -264,7 +264,7 @@ export const confirm_txSignatureHandler = async (msg: any, action?: string) => {
 
 const isValidtxSignature = async (msg: any, publicKey: string) => {
   try {
-    await bot
+    bot
       .sendMessage(msg.chat.id, `Please input valid <i>txID</i> link.`, {
         parse_mode: "HTML",
         reply_markup: {
@@ -303,7 +303,7 @@ const isValidtxSignature = async (msg: any, publicKey: string) => {
 
               const tx = await connection.getParsedTransaction(txSignature);
               if (!tx || !tx.meta || !tx.transaction) {
-                await isValidtxSignature(msg, publicKey);
+                isValidtxSignature(msg, publicKey);
                 return;
               }
 
@@ -318,7 +318,7 @@ const isValidtxSignature = async (msg: any, publicKey: string) => {
                   if (publicKey === receiverAddress) {
                     const InputAmount = parsed.info.lamports / 1e9;
 
-                    tokenDepositInfo = {
+                    tokenDepositInfo[msg.chat.id] = {
                       tokenInfo: config.solTokenAddress,
                       userId: msg.chat.id,
                     };
@@ -366,7 +366,7 @@ const isValidtxSignature = async (msg: any, publicKey: string) => {
                       const tokenAccount = instruction.parsed.info.mint;
 
                       if (publicKey === receiverAddress) {
-                        tokenDepositInfo = {
+                        tokenDepositInfo[msg.chat.id] = {
                           tokenInfo: tokenAccount,
                           userId: msg.chat.id,
                         };

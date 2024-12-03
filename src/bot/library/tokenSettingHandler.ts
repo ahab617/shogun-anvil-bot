@@ -20,9 +20,6 @@ interface TtokenInfo {
   decimal: number;
   publicKey: string;
 }
-export let timeline = 0;
-export let tokenInfo: TtokenInfo | null;
-
 export const tokenSettingHandler = async (msg: any) => {
   try {
     const userpermission = await userList.findOne({ userId: msg.chat.id });
@@ -46,9 +43,7 @@ export const tokenSettingHandler = async (msg: any) => {
       );
       return;
     }
-    await removeAnswerCallback(msg.chat);
-    timeline = 0;
-    tokenInfo = null;
+    removeAnswerCallback(msg.chat);
     const user = await tokenController.findOne({
       filter: {
         userId: msg.chat.id,
@@ -106,7 +101,7 @@ export const tokenSettingHandler = async (msg: any) => {
               ) {
                 return;
               }
-              tokenInfo = (await isValidSolanaToken(tokenAddress, msg)) as any;
+              const tokenInfo = isValidSolanaToken(tokenAddress, msg) as any;
               if (tokenInfo) {
                 const r = await tokenController.create(tokenInfo);
                 if (r) {
@@ -139,14 +134,14 @@ export const tokenSettingHandler = async (msg: any) => {
                   );
                 }
               } else {
-                await promptForTokenAddress(msg);
+                promptForTokenAddress(msg);
               }
             }
           );
         });
     } else {
       let marketCap = 0;
-      const response = await axios(`${config.dexAPI}/${user.publicKey}`);
+      const response = await axios.post(`${config.dexAPI}/${user.publicKey}`);
       if (response?.status == 200 && response?.data?.pairs) {
         marketCap = response.data.pairs[0].marketCap;
       } else {
@@ -193,7 +188,7 @@ export const tokenSettingHandler = async (msg: any) => {
 
 const isValidSolanaToken = async (tokenAddress: string | any, msg: any) => {
   try {
-    const response = await axios(`${config.dexAPI}/${tokenAddress}`);
+    const response = await axios.post(`${config.dexAPI}/${tokenAddress}`);
     if (response?.status == 200 && response?.data?.pairs) {
       let data = response.data.pairs;
       const info = await connection.getParsedAccountInfo(
@@ -216,7 +211,7 @@ const isValidSolanaToken = async (tokenAddress: string | any, msg: any) => {
           });
         }
       }
-      const tokenInfo = {
+      const tokenInfo1 = {
         userId: msg.chat.id,
         name: response.data.pairs[0].baseToken.name,
         symbol: response.data.pairs[0].baseToken.symbol,
@@ -224,7 +219,7 @@ const isValidSolanaToken = async (tokenAddress: string | any, msg: any) => {
         decimal: decimal,
         publicKey: tokenAddress,
       } as TtokenInfo;
-      return tokenInfo;
+      return tokenInfo1;
     } else {
       return null;
     }
@@ -235,7 +230,7 @@ const isValidSolanaToken = async (tokenAddress: string | any, msg: any) => {
 
 const promptForTokenAddress = async (msg: any) => {
   try {
-    await bot
+    bot
       .sendMessage(
         msg.chat.id,
         `

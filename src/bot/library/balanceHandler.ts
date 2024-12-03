@@ -1,19 +1,15 @@
 import axios from "axios";
 import { bot } from "../index";
-import {
-  checkSolBalance,
-  checkSplTokenBalance,
-} from "../../service/getBalance";
+import { checkSolBalance } from "../../service/getBalance";
 import config from "../../config.json";
 import { removeAnswerCallback } from "./index";
 import walletController from "../../controller/wallet";
 import depositController from "../../controller/deposit";
-let tokenAccount = "" as any;
 
 export const balanceHandler = async (msg: any) => {
   try {
-    await removeAnswerCallback(msg.chat);
-    tokenAccount = "";
+    removeAnswerCallback(msg.chat);
+    let tokenAccount = "";
     const user = await walletController.findOne({
       filter: {
         userId: msg.chat.id,
@@ -25,40 +21,22 @@ export const balanceHandler = async (msg: any) => {
         const tokenInfo = await depositController.findOne({
           filter: { userId: msg.chat.id },
         });
-
         if (tokenInfo) {
           for (let i = 0; i < tokenInfo.tokenAddress.length; i++) {
             try {
-              if (tokenInfo.tokenAddress[i] === config.solTokenAddress) {
-                const balance = await checkSolBalance(user.publicKey);
-                tokenAccount += `
+              const balance = await checkSolBalance(user.publicKey);
+              tokenAccount += `
 <b>Name: </b>  Solana
 <b>Symbol: </b>  SOL
 <b>Token Address:</b>  <code>${tokenInfo.tokenAddress[i]}</code>
 <b>Balance: </b>  ${balance} 
   `;
-              } else {
-                const balance = await checkSplTokenBalance(
-                  tokenInfo.tokenAddress[i],
-                  user.publicKey
-                );
-                const r = await getTokenInfo(tokenInfo.tokenAddress[i]);
-
-                if (r) {
-                  tokenAccount += `
-<b>Name: </b>  ${r?.name}
-<b>Symbol: </b>  ${r?.symbol}
-<b>Token Address: </b>  <code>${r?.address}</code>
-<b>Balance: </b>  ${balance}
-  `;
-                }
-              }
             } catch (error) {
               console.log("Error fetching token information:", error);
             }
           }
 
-          await balanceModal(msg);
+          balanceModal(msg, tokenAccount);
         } else {
           if (
             ![
@@ -79,14 +57,18 @@ export const balanceHandler = async (msg: any) => {
             );
           }
 
-          bot.sendMessage(msg.chat.id, `Please add tokens to your wallet.`, {
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "Return 👈", callback_data: "return" }],
-              ],
-            },
-          });
+          try {
+            const balance = (await checkSolBalance(user.publicKey)) || 0;
+            tokenAccount += `
+<b>Name: </b>  Solana
+<b>Symbol: </b>  SOL
+<b>Token Address:</b>  <code>${config.solTokenAddress}</code>
+<b>Balance: </b>  ${balance} 
+`;
+            balanceModal(msg, tokenAccount);
+          } catch (error) {
+            console.log("Error fetching token information:", error);
+          }
         }
       } catch (error) {
         console.log("Error accessing deposit information:", error);
@@ -123,7 +105,7 @@ export const balanceHandler = async (msg: any) => {
   }
 };
 
-const balanceModal = async (msg: any) => {
+const balanceModal = async (msg: any, tokenAccount: string) => {
   try {
     bot.sendMessage(
       msg.chat.id,

@@ -39,6 +39,6 @@ export default new Commands(
       );
       return;
     }
-    await swapHandler(msg);
+    swapHandler(msg);
   }
 );

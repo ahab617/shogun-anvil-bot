@@ -93,8 +93,8 @@ bot.on("callback_query", async (callbackQuery) => {
         break;
 
       case "admin_ui":
-        await deleteMessage(msg);
-        await adminStartHandler(msg);
+        deleteMessage(msg);
+        adminStartHandler(msg);
         break;
 
       case "setting_save":
@@ -130,17 +130,17 @@ bot.on("message", async (msg: any) => {
           depositMiniAmount = Number(msg.text);
           adminStatus.depositEdit = false;
           adminStatus.gasFeeEdit = true;
-          await gasFeeEditModal(msg);
+          gasFeeEditModal(msg);
         } else {
-          await validatorModal(msg);
+          validatorModal(msg);
         }
       } else if (adminStatus.gasFeeEdit) {
         if (!isNaN(msg.text) && Number(msg.text) < 100) {
           gasFee = Number(msg.text);
           adminStatus.gasFeeEdit = false;
-          await settingShowModal(msg);
+          settingShowModal(msg);
         } else {
-          await validatorModal(msg);
+          validatorModal(msg);
         }
       } else if (adminStatus.addAdmin) {
         const adminData = msg.text.split("_");
@@ -150,9 +150,9 @@ bot.on("message", async (msg: any) => {
             userName: adminData[1],
           };
           const result = await adminListController.create(addAdmin);
-          await addAdminResultModal(result, msg);
+          addAdminResultModal(result, msg);
         } else {
-          await adminValidatorModal(msg);
+          adminValidatorModal(msg);
         }
       }
     }
@@ -161,13 +161,13 @@ bot.on("message", async (msg: any) => {
 
 const addAdmin = async (msg: any) => {
   try {
-    await deleteMessage(msg);
+    deleteMessage(msg);
     let opts = {};
     let newText = `` as string;
-    const baseOption = await generateCallbackOption(msg, "HTML");
+    const baseOption = generateCallbackOption(msg, "HTML");
     const adminData = (await adminListController.find()) as Array<TadminData>;
     if (adminData?.length > 0) {
-      const replyMarks = await adminData.map((item: any) => {
+      const replyMarks = adminData.map((item: any) => {
         return [
           {
             text: `${item.userName} (${item.userId})`,
@@ -223,8 +223,8 @@ const addAdmin = async (msg: any) => {
 
 const addAdminModal = async (msg: any) => {
   try {
-    await deleteMessage(msg);
-    const baseOption = await generateCallbackOption(msg, "HTML");
+    deleteMessage(msg);
+    const baseOption = generateCallbackOption(msg, "HTML");
     const opts = { ...baseOption };
     const newText =
       `Please enter admin ID with userName.\n\n` + `<b>ex: 000000_King</b>`;
@@ -257,7 +257,7 @@ const selectAdminModal = async (msg: any, data: any) => {
 };
 const depositSettingHandler = async (msg: any) => {
   try {
-    await deleteMessage(msg);
+    deleteMessage(msg);
     const data = await depositSettingController.findOne({
       filter: {
         userId: msg.chat.id,
@@ -293,7 +293,7 @@ const depositSettingHandler = async (msg: any) => {
 
 const depositAmountModal = async (msg: any) => {
   try {
-    await deleteMessage(msg);
+    deleteMessage(msg);
     const newText = `Please Enter the Deposit MiniAmount.\n\n` + `ex: 0.5 `;
     bot.sendMessage(msg.chat.id, newText, {
       parse_mode: "HTML",
@@ -307,8 +307,8 @@ const depositAmountModal = async (msg: any) => {
 };
 const gasFeeEditModal = async (msg: any) => {
   try {
-    await deleteMessage(msg);
-    await deleteMessage1(msg, msg.message_id - 1);
+    deleteMessage(msg);
+    deleteMessage1(msg, msg.message_id - 1);
     const newText =
       `<b>Deposit MiniAmount: </b>  ${msg.text} \n\n` +
       `Please Enter the Gas Fee. (%)\n` +
@@ -326,8 +326,8 @@ const gasFeeEditModal = async (msg: any) => {
 
 const adminValidatorModal = async (msg: any) => {
   try {
-    await deleteMessage1(msg, msg.message_id - 1);
-    const baseOption = await generateCallbackOption(msg, "HTML");
+    deleteMessage1(msg, msg.message_id - 1);
+    const baseOption = generateCallbackOption(msg, "HTML");
     const opts = { ...baseOption };
     const newText = `Please enter the valid type.`;
     bot.sendMessage(msg.chat.id, newText, opts as SendMessageOptions);
@@ -360,8 +360,8 @@ const validatorModal = async (msg: any) => {
 
 const settingShowModal = async (msg: any) => {
   try {
-    await deleteMessage(msg);
-    await deleteMessage1(msg, msg.message_id - 1);
+    deleteMessage(msg);
+    deleteMessage1(msg, msg.message_id - 1);
     const newText =
       `<b>Setup is ready.</b>\n\n` +
       `<b>Deposit MiniAmout: </b>  ${depositMiniAmount} SOL\n` +
@@ -422,7 +422,7 @@ const adminDeleteConfirm = async (msg: any, userId: number) => {
     const result = await adminListController.deleteOne({
       filter: { userId: userId },
     });
-    const baseOption = await generateCallbackOption(msg, "HTML");
+    const baseOption = generateCallbackOption(msg, "HTML");
     const opts = { ...baseOption };
     if (result) {
       bot.sendMessage(

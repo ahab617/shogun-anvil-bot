@@ -22,14 +22,13 @@ export const depositHandler = async (
       { inline_keyboard: [] },
       { chat_id: msg.chat.id, message_id: msg.message_id }
     );
-    tokenDepositInfo = {};
     const user = await walletController.findOne({
       filter: {
         userId: msg.chat.id,
       },
     });
 
-    await bot
+    bot
       .sendMessage(
         msg.chat.id,
         `
@@ -83,7 +82,7 @@ Please deposit to the following address and send <i>tx</i> link.
                     user.publicKey === receiverAddress &&
                     tokenAddress == config.solTokenAddress
                   ) {
-                    tokenDepositInfo = {
+                    tokenDepositInfo[msg.chat.id] = {
                       tokenInfo: config.solTokenAddress,
                       userId: msg.chat.id,
                     };
@@ -137,7 +136,7 @@ ${txSignature}`,
                           tokenAddress
                         );
                       } else {
-                        tokenDepositInfo = {
+                        tokenDepositInfo[msg.chat.id] = {
                           tokenInfo: tokenAddress,
                           userId: msg.chat.id,
                         };
@@ -210,7 +209,9 @@ ${txSignature}`,
 
 export const inputToken_txSignature = async (msg: any) => {
   try {
-    const result = await depositController.create(tokenDepositInfo);
+    const result = await depositController.create(
+      tokenDepositInfo[msg.chat.id]
+    );
     if (result.status == 200) {
       bot.editMessageReplyMarkup(
         { inline_keyboard: [] },
@@ -371,7 +372,7 @@ const isValidtxSignature = async (
   tokenAddress: any
 ) => {
   try {
-    await bot
+    bot
       .sendMessage(
         msg.chat.id,
         `
@@ -422,7 +423,7 @@ const isValidtxSignature = async (
                   publicKey === receiverAddress &&
                   tokenAddress == config.solTokenAddress
                 ) {
-                  tokenDepositInfo = {
+                  tokenDepositInfo[msg.chat.id] = {
                     tokenInfo: config.solTokenAddress,
                     userId: msg.chat.id,
                   };
@@ -472,7 +473,7 @@ ${txSignature}`,
                     ) {
                       return isValidtxSignature(msg, publicKey, tokenAddress);
                     } else {
-                      tokenDepositInfo = {
+                      tokenDepositInfo[msg.chat.id] = {
                         tokenInfo: tokenAddress,
                         userId: msg.chat.id,
                       };
@@ -545,7 +546,7 @@ const isSolValidtxSignature = async (
   walletPublicKey: string
 ) => {
   try {
-    await bot
+    bot
       .sendMessage(
         msg.chat.id,
         `

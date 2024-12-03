@@ -38,10 +38,7 @@ export default new Commands(
       );
       return;
     }
-    await removeAnswerCallback(msg.chat);
-    await sendMessage(
-      msg.chat.id,
-      `<b>All active commands have been canceled.</b>`
-    );
+    removeAnswerCallback(msg.chat);
+    sendMessage(msg.chat.id, `<b>All active commands have been canceled.</b>`);
   }
 );

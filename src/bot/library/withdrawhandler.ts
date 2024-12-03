@@ -19,47 +19,36 @@ interface TwithdrawInfo {
   amount: number;
   privateKey: string;
 }
-let tokenAccount = [] as any;
-let userWalletAddress = "" as string;
-let balanceAmount = [] as any;
-let userBotWalletPrivateKey = "" as any;
-let userBotWalletPublicKey = "" as any;
-let withdrawInfo: TwithdrawInfo | null;
+let tokenAccount = {} as any;
+let balanceAmount = {} as any;
+let withdrawInfo = {} as any;
 
 export const withdrawHandler = async (msg: any) => {
   try {
-    await removeAnswerCallback(msg.chat);
-    tokenAccount = [];
-    userWalletAddress = "";
-    balanceAmount = [];
-    userBotWalletPrivateKey = "";
-    userBotWalletPublicKey = "";
-    withdrawInfo = null;
+    removeAnswerCallback(msg.chat);
     const user = await walletController.findOne({
       filter: {
         userId: msg.chat.id,
       },
     });
     if (user) {
-      userBotWalletPrivateKey = user.privateKey;
-      userBotWalletPublicKey = user.publicKey;
       const tokenInfo = await depositController.findOne({
         filter: { userId: msg.chat.id },
       });
       try {
+        let newArray = [];
+        let newBalance = [];
         if (tokenInfo) {
           for (let i = 0; i < tokenInfo.tokenAddress.length; i++) {
             try {
               if (tokenInfo.tokenAddress[i] === config.solTokenAddress) {
-                const balance = (await checkSolBalance(
-                  user.publicKey
-                )) as number;
+                const balance = (await checkSolBalance(user.publicKey)) || 0;
                 if (balance > 0) {
-                  await balanceAmount.push({
+                  newBalance.push({
                     token: tokenInfo.tokenAddress[i],
                     balance: balance,
                   });
-                  await tokenAccount.unshift([
+                  newArray.unshift([
                     {
                       text: `SOL  (${balance})`,
                       callback_data: `applyToken_${tokenInfo.tokenAddress[i]}`,
@@ -77,13 +66,13 @@ export const withdrawHandler = async (msg: any) => {
                   );
                   if (response?.status === 200 && response?.data?.pairs) {
                     const data = response.data.pairs[0];
-                    await tokenAccount.push([
+                    newArray.push([
                       {
                         text: `${data.baseToken.name}  (${balance})`,
                         callback_data: `applyToken_${tokenInfo.tokenAddress[i]}`,
                       },
                     ]);
-                    await balanceAmount.push({
+                    newBalance.push({
                       token: tokenInfo.tokenAddress[i],
                       balance: balance,
                     });
@@ -94,16 +83,42 @@ export const withdrawHandler = async (msg: any) => {
               console.log(`Error processing token at index ${i}:`, err);
             }
           }
-          await withdrawModal(msg);
+          tokenAccount[msg.chat.id] = {
+            tokenInfo: newArray,
+          };
+          balanceAmount[msg.chat.id] = {
+            balance: newBalance,
+          };
+          withdrawModal(msg);
         } else {
-          bot.sendMessage(msg.chat.id, `Please deposit in the wallet.`, {
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "Return  👈", callback_data: "return" }],
-              ],
-            },
-          });
+          const balance = (await checkSolBalance(user.publicKey)) || 0;
+          if (balance == 0) {
+            bot.sendMessage(msg.chat.id, `Please deposit in the wallet.`, {
+              parse_mode: "HTML",
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "Return  👈", callback_data: "return" }],
+                ],
+              },
+            });
+          } else {
+            newBalance.push({
+              token: config.solTokenAddress,
+              balance: balance,
+            });
+            newArray.unshift([
+              {
+                text: `SOL  (${balance})`,
+                callback_data: `applyToken_${config.solTokenAddress}`,
+              },
+            ]);
+            tokenAccount[msg.chat.id] = {
+              tokenInfo: newArray,
+            };
+            balanceAmount[msg.chat.id] = {
+              balance: newBalance,
+            };
+          }
         }
       } catch (error) {
         console.log("Error occurred while processing user wallet:", error);
@@ -142,9 +157,9 @@ export const withdrawSelectHandler = async (msg: any, action: string | any) => {
       );
     }
     const solBalance =
-      (await balanceAmount.filter(
+      balanceAmount[msg.chat.id]?.balance?.filter(
         (item: any) => item.token === config.solTokenAddress
-      )[0]?.balance) || "0";
+      )[0]?.balance || "0";
     if (Number(solBalance) < config.withdrawFee) {
       bot.sendMessage(
         msg.chat.id,
@@ -159,7 +174,7 @@ export const withdrawSelectHandler = async (msg: any, action: string | any) => {
         }
       );
     } else {
-      await bot
+      bot
         .sendMessage(
           msg.chat.id,
           `
@@ -194,15 +209,14 @@ export const withdrawSelectHandler = async (msg: any, action: string | any) => {
               }
               const tokenAddress = action.split("_")[1];
               const balance =
-                balanceAmount.filter(
+                balanceAmount[msg.chat.id]?.balance?.filter(
                   (item: any) => item.token === tokenAddress
                 )[0]?.balance || "0";
               const isValidAddress = await isValidSolanaAddress(walletAddress);
               if (isValidAddress) {
-                userWalletAddress = walletAddress;
-                await selectInputForm(msg, tokenAddress, balance);
+                selectInputForm(msg, tokenAddress, balance, walletAddress);
               } else {
-                await promptForWithAddress(msg, tokenAddress, balance);
+                promptForWithAddress(msg, tokenAddress, balance);
               }
             }
           );
@@ -215,7 +229,9 @@ export const withdrawSelectHandler = async (msg: any, action: string | any) => {
 
 const withdrawModal = async (msg: any) => {
   try {
-    await tokenAccount.push([{ text: "Return  👈", callback_data: "return" }]);
+    tokenAccount[msg.chat.id]?.tokenInfo?.push([
+      { text: "Return  👈", callback_data: "return" },
+    ]);
     bot.sendMessage(
       msg.chat.id,
       `
@@ -224,7 +240,7 @@ const withdrawModal = async (msg: any) => {
       {
         parse_mode: "HTML",
         reply_markup: {
-          inline_keyboard: tokenAccount,
+          inline_keyboard: tokenAccount[msg.chat.id]?.tokenInfo,
         },
       }
     );
@@ -239,7 +255,7 @@ const promptForWithAddress = async (
   balance: number
 ) => {
   try {
-    await bot
+    bot
       .sendMessage(
         msg.chat.id,
         `
@@ -273,9 +289,9 @@ const promptForWithAddress = async (
             ) {
               return;
             }
-            const isValidAddress = await isValidSolanaAddress(withdrawAddress);
+            const isValidAddress = isValidSolanaAddress(withdrawAddress);
             if (isValidAddress) {
-              await selectInputForm(msg, tokenAddress, balance);
+              selectInputForm(msg, tokenAddress, balance, withdrawAddress);
             } else {
               return promptForWithAddress(msg, tokenAddress, balance);
             }
@@ -299,7 +315,8 @@ const isValidSolanaAddress = (address: string) => {
 const selectInputForm = async (
   msg: any,
   tokenAddress: string,
-  balance: number
+  balance: number,
+  walletAddress: string
 ) => {
   try {
     bot.sendMessage(
@@ -315,11 +332,11 @@ const selectInputForm = async (
             [
               {
                 text: "All",
-                callback_data: `amountAll_${tokenAddress}`,
+                callback_data: `amountAll_${tokenAddress}_${walletAddress}`,
               },
               {
                 text: "Some",
-                callback_data: `amountSome_${tokenAddress}`,
+                callback_data: `amountSome_${tokenAddress}_${walletAddress}`,
               },
             ],
           ],
@@ -332,11 +349,18 @@ const selectInputForm = async (
 };
 
 export const allWithdrawHandler = async (msg: any, action: string) => {
+  const user = await walletController.findOne({
+    filter: {
+      userId: msg.chat.id,
+    },
+  });
   try {
     const tokenAddress = action.split("_")[1];
+    const walletAddress = action.split("_")[2];
     const balance =
-      (await balanceAmount.filter((item: any) => item.token === tokenAddress)[0]
-        ?.balance) || "0";
+      balanceAmount[msg.chat.id]?.balance?.filter(
+        (item: any) => item.token === tokenAddress
+      )[0]?.balance || "0";
     if (
       ![
         "/cancel",
@@ -356,29 +380,29 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
       );
     }
     if (tokenAddress === config.solTokenAddress) {
-      withdrawInfo = {
+      withdrawInfo[msg.chat.id] = {
         userId: msg.chat.id,
-        withdrawAddress: userWalletAddress,
+        withdrawAddress: walletAddress,
         token: tokenAddress,
         amount: balance - config.withdrawFee,
-        privateKey: userBotWalletPrivateKey,
+        privateKey: user.privateKey,
       } as TwithdrawInfo;
     } else {
-      withdrawInfo = {
+      withdrawInfo[msg.chat.id] = {
         userId: msg.chat.id,
-        withdrawAddress: userWalletAddress,
+        withdrawAddress: walletAddress,
         token: tokenAddress,
         amount: balance,
-        privateKey: userBotWalletPrivateKey,
+        privateKey: user.privateKey,
       } as TwithdrawInfo;
     }
     bot.sendMessage(
       msg.chat.id,
       `
-<b>To: </b> <code>${userWalletAddress}</code>
-<b>From: </b> <code>${userBotWalletPublicKey}</code>
+<b>To: </b> <code>${walletAddress}</code>
+<b>From: </b> <code>${user.publicKey}</code>
 <b>Token Address: </b>  ${tokenAddress}
-<b>Amount: </b>  ${withdrawInfo?.amount}`,
+<b>Amount: </b>  ${withdrawInfo[msg.chat.id]?.amount}`,
       {
         parse_mode: "HTML",
         reply_markup: {
@@ -421,7 +445,7 @@ export const applyWithdrawHandler = async (msg: any) => {
         { chat_id: msg.chat.id, message_id: msg.message_id }
       );
     }
-    const result = await withdrawService(withdrawInfo);
+    const result = await withdrawService(withdrawInfo[msg.chat.id]);
     if (result) {
       bot.sendMessage(
         msg.chat.id,
@@ -437,7 +461,7 @@ export const applyWithdrawHandler = async (msg: any) => {
           },
         }
       );
-      await withdrawController.create(withdrawInfo);
+      await withdrawController.create([withdrawInfo[msg.chat.id]]);
     }
   } catch (error) {
     console.log("applyWithdrawHandlerError: ", error);
@@ -445,11 +469,18 @@ export const applyWithdrawHandler = async (msg: any) => {
 };
 
 export const someWithdrawHandler = async (msg: any, action: string) => {
+  const user = await walletController.findOne({
+    filter: {
+      userId: msg.chat.id,
+    },
+  });
   try {
     const tokenAddress = action.split("_")[1];
+    const walletAddress = action.split("_")[2];
     const balance =
-      (await balanceAmount.filter((item: any) => item.token === tokenAddress)[0]
-        ?.balance) || "0";
+      balanceAmount[msg.chat.id]?.balance.filter(
+        (item: any) => item.token === tokenAddress
+      )[0]?.balance || "0";
     if (
       ![
         "/cancel",
@@ -504,22 +535,23 @@ export const someWithdrawHandler = async (msg: any, action: string) => {
               return;
             }
             const isValidBalance = await isValidAmount(
+              msg,
               withdrawAmount,
               tokenAddress
             );
             if (isValidBalance) {
-              withdrawInfo = {
+              withdrawInfo[msg.chat.id] = {
                 userId: sentMessage.chat.id,
-                withdrawAddress: userWalletAddress,
+                withdrawAddress: walletAddress,
                 token: tokenAddress,
                 amount: Number(withdrawAmount),
-                privateKey: userBotWalletPrivateKey,
+                privateKey: user.privateKey,
               };
               bot.sendMessage(
                 msg.chat.id,
                 `
-<b>To: </b> <code>${userWalletAddress}</code>
-<b>From: </b> <code>${userBotWalletPublicKey}</code>
+<b>To: </b> <code>${walletAddress}</code>
+<b>From: </b> <code>${user.publicKey}</code>
 <b>Token Address: </b>  ${tokenAddress}
 <b>Amount: </b>  ${withdrawAmount}`,
                 {
@@ -541,7 +573,7 @@ export const someWithdrawHandler = async (msg: any, action: string) => {
                 }
               );
             } else {
-              await promptForWithdraw(msg, tokenAddress, balance);
+              promptForWithdraw(msg, tokenAddress, balance, walletAddress);
             }
           }
         );
@@ -551,8 +583,12 @@ export const someWithdrawHandler = async (msg: any, action: string) => {
   }
 };
 
-const isValidAmount = async (amount: string, tokenAddress: string) => {
-  const balance = await balanceAmount.filter(
+const isValidAmount = async (
+  msg: any,
+  amount: string,
+  tokenAddress: string
+) => {
+  const balance = balanceAmount[msg.chat.id]?.balance?.filter(
     (item: any) => item.token === tokenAddress
   )[0]?.balance;
   if (Number(amount) <= balance) {
@@ -565,10 +601,16 @@ const isValidAmount = async (amount: string, tokenAddress: string) => {
 const promptForWithdraw = async (
   msg: any,
   tokenAddress: string,
-  balance: number
+  balance: number,
+  walletAddress: string
 ) => {
+  const user = await walletController.findOne({
+    filter: {
+      userId: msg.chat.id,
+    },
+  });
   try {
-    await bot
+    bot
       .sendMessage(
         msg.chat.id,
         `
@@ -605,22 +647,23 @@ const promptForWithdraw = async (
             }
             // Whether walletAddress is a solana address or not.
             const isValidBalance = await isValidAmount(
+              msg,
               withdrawAmount,
               tokenAddress
             );
             if (isValidBalance) {
-              withdrawInfo = {
+              withdrawInfo[msg.chat.id] = {
                 userId: msg.chat.id,
-                withdrawAddress: userWalletAddress,
+                withdrawAddress: walletAddress,
                 token: tokenAddress,
                 amount: Number(withdrawAmount),
-                privateKey: userBotWalletPrivateKey,
+                privateKey: user.privateKey,
               };
               bot.sendMessage(
                 msg.chat.id,
                 `
-<b>To: </b> <code>${userWalletAddress}</code>
-<b>From: </b> <code>${userBotWalletPublicKey}</code>
+<b>To: </b> <code>${walletAddress}</code>
+<b>From: </b> <code>${user.publicKey}</code>
 <b>Token Address: </b>  ${tokenAddress}
 <b>Amount: </b>  ${withdrawAmount}`,
                 {
@@ -642,7 +685,12 @@ const promptForWithdraw = async (
                 }
               );
             } else {
-              return promptForWithdraw(msg, tokenAddress, balance);
+              return promptForWithdraw(
+                msg,
+                tokenAddress,
+                balance,
+                walletAddress
+              );
             }
           }
         );

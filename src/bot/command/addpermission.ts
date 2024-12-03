@@ -15,6 +15,6 @@ export default new Commands(
       bot.sendMessage(msg.chat.id, `This command can only be used in DM.`, {});
       return;
     }
-    await addpermission(msg);
+    addpermission(msg);
   }
 );

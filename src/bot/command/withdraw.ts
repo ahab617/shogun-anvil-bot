@@ -38,6 +38,6 @@ export default new Commands(
       );
       return;
     }
-    await withdrawHandler(msg);
+    withdrawHandler(msg);
   }
 );
