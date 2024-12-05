@@ -101,7 +101,7 @@ export const tokenSettingHandler = async (msg: any) => {
               ) {
                 return;
               }
-              const tokenInfo = isValidSolanaToken(tokenAddress, msg) as any;
+              const tokenInfo = await isValidSolanaToken(tokenAddress, msg);
               if (tokenInfo) {
                 const r = await tokenController.create(tokenInfo);
                 if (r) {

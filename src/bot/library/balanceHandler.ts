@@ -1,15 +1,18 @@
 import axios from "axios";
 import { bot } from "../index";
-import { checkSolBalance } from "../../service/getBalance";
+import {
+  checkSolBalance,
+  checkSplTokenBalance,
+} from "../../service/getBalance";
 import config from "../../config.json";
 import { removeAnswerCallback } from "./index";
 import walletController from "../../controller/wallet";
-import depositController from "../../controller/deposit";
-
+import tokenSettingController from "../../controller/tokenSetting";
+let tokenAccount = {} as any;
 export const balanceHandler = async (msg: any) => {
   try {
     removeAnswerCallback(msg.chat);
-    let tokenAccount = "";
+
     const user = await walletController.findOne({
       filter: {
         userId: msg.chat.id,
@@ -18,24 +21,28 @@ export const balanceHandler = async (msg: any) => {
 
     if (user) {
       try {
-        const tokenInfo = await depositController.findOne({
+        const tokenInfo = await tokenSettingController.findOne({
           filter: { userId: msg.chat.id },
         });
+        const solBalance = (await checkSolBalance(user.publicKey)) || 0;
         if (tokenInfo) {
-          for (let i = 0; i < tokenInfo.tokenAddress.length; i++) {
-            try {
-              const balance = await checkSolBalance(user.publicKey);
-              tokenAccount += `
+          const splTokenBalance =
+            (await checkSplTokenBalance(tokenInfo.publicKey, user.publicKey)) ||
+            0;
+          let newText =
+            `
 <b>Name: </b>  Solana
 <b>Symbol: </b>  SOL
-<b>Token Address:</b>  <code>${tokenInfo.tokenAddress[i]}</code>
-<b>Balance: </b>  ${balance} 
+<b>Token Address:</b>  <code>${config.solTokenAddress}</code>
+<b>Balance: </b>  ${solBalance}\n\n` +
+            `<b>Name: </b>  ${tokenInfo.name}
+<b>Symbol: </b>  ${tokenInfo.symbol}
+<b>Token Address:</b>  <code>${tokenInfo.publicKey}</code>
+<b>Balance: </b>  ${splTokenBalance}
   `;
-            } catch (error) {
-              console.log("Error fetching token information:", error);
-            }
-          }
-
+          tokenAccount[msg.chat.id] = {
+            text: newText,
+          };
           balanceModal(msg, tokenAccount);
         } else {
           if (
@@ -58,13 +65,15 @@ export const balanceHandler = async (msg: any) => {
           }
 
           try {
-            const balance = (await checkSolBalance(user.publicKey)) || 0;
-            tokenAccount += `
+            let newText = `
 <b>Name: </b>  Solana
 <b>Symbol: </b>  SOL
 <b>Token Address:</b>  <code>${config.solTokenAddress}</code>
-<b>Balance: </b>  ${balance} 
+<b>Balance: </b>  ${solBalance} 
 `;
+            tokenAccount[msg.chat.id] = {
+              text: newText,
+            };
             balanceModal(msg, tokenAccount);
           } catch (error) {
             console.log("Error fetching token information:", error);
@@ -105,13 +114,13 @@ export const balanceHandler = async (msg: any) => {
   }
 };
 
-const balanceModal = async (msg: any, tokenAccount: string) => {
+const balanceModal = async (msg: any, tokenAccount: any) => {
   try {
     bot.sendMessage(
       msg.chat.id,
       `
 <b>Here is your current wallet balance:</b> 
-${tokenAccount}`,
+${tokenAccount[msg.chat.id]?.text}`,
       {
         parse_mode: "HTML",
         reply_markup: {
@@ -121,25 +130,5 @@ ${tokenAccount}`,
     );
   } catch (error) {
     console.log("Error sending wallet balance message:", error);
-  }
-};
-
-const getTokenInfo = async (tokenAddress: string) => {
-  try {
-    const response = await axios(`${config.dexAPI}/${tokenAddress}`);
-    if (response?.status == 200 && response?.data?.pairs) {
-      const data = response.data.pairs[0];
-      let token = {
-        address: tokenAddress,
-        name: data.baseToken.name,
-        symbol: data.baseToken.symbol,
-      };
-      return token;
-    } else {
-      return null;
-    }
-  } catch (err) {
-    console.log("getTokenInfo in balanceHandler: ", err);
-    return null;
   }
 };

@@ -40,6 +40,7 @@ const SwapSchema = new Schema({
   flag: { type: Boolean, default: true },
   isBalance: { type: Boolean, default: true },
   loopTime: { type: Number, required: true },
+  priorityFee: { type: String, required: true },
   active: { type: Boolean, default: true },
 });
 
@@ -74,7 +75,6 @@ const WithdrawSchema = new Schema({
   token: { type: String, required: true },
   amount: { type: String, required: true },
   privateKey: { type: String, required: true },
-  flag: { type: Boolean, default: false },
 });
 
 export const Swap = mongoose.model("swaps", SwapSchema);

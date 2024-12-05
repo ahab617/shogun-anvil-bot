@@ -3,14 +3,19 @@ import {
   VersionedTransaction,
   sendAndConfirmTransaction,
   Keypair,
+  Connection,
+  clusterApiUrl,
 } from "@solana/web3.js";
 import axios from "axios";
 import Decimal from "decimal.js";
 import { NATIVE_MINT } from "@solana/spl-token";
 import { decryptPrivateKey } from "../service/index";
 import { API_URLS } from "@raydium-io/raydium-sdk-v2";
-import { connection, fetchTokenAccountData } from "./config";
-
+import { fetchTokenAccountData } from "./config";
+const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+  commitment: "confirmed",
+  wsEndpoint: "wss://api.mainnet-beta.solana.com",
+});
 export let walletPublic = "" as string;
 
 interface SwapCompute {
@@ -44,7 +49,8 @@ export const apiSwap = async (
   baseDecimal: number,
   inputMintAddress: string,
   outMintAddress: string,
-  walletPrivateKey: string
+  walletPrivateKey: string,
+  priorityFee: string
 ) => {
   try {
     const privateKey = (await decryptPrivateKey(walletPrivateKey)) as string;
@@ -86,7 +92,6 @@ export const apiSwap = async (
       success: boolean;
       data: { default: { vh: number; h: number; m: number } };
     }>(`${API_URLS.BASE_HOST}${API_URLS.PRIORITY_FEE}`);
-
     const { data: swapResponse } = await axios.get<SwapCompute>(
       `${API_URLS.SWAP_HOST}/compute/swap-base-in?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippage}&txVersion=${txVersion}`
     );
@@ -95,13 +100,24 @@ export const apiSwap = async (
     if (!swapResponse.success) {
       return { status: 403, msg: `Swap failed: ${swapResponse.msg}` };
     }
+    let priorityFeeValue = 0;
+    if (priorityFee === "high") {
+      priorityFeeValue = data.data.default.vh;
+    } else if (priorityFee === "medium") {
+      priorityFeeValue = data.data.default.h;
+    } else {
+      priorityFeeValue = data.data.default.m;
+    }
+    console.log("----------------------");
+    console.log(priorityFeeValue);
+    console.log("----------------------");
     const { data: swapTransactions } = await axios.post<{
       id: string;
       version: string;
       success: boolean;
       data: { transaction: string }[];
     }>(`${API_URLS.SWAP_HOST}/transaction/swap-base-in`, {
-      computeUnitPriceMicroLamports: String(data.data.default.m),
+      computeUnitPriceMicroLamports: String(priorityFeeValue),
       swapResponse,
       txVersion,
       wallet: owner.publicKey.toBase58(),
@@ -140,6 +156,7 @@ export const apiSwap = async (
     } else {
       for (const tx of allTransactions) {
         idx++;
+        console.log("444444444444444444444444444");
         const transaction = tx as VersionedTransaction;
         transaction.sign([owner]);
         try {
@@ -152,6 +169,7 @@ export const apiSwap = async (
             { blockhash, lastValidBlockHeight, signature: txId },
             "finalized"
           );
+          console.log(txId);
           if (r) {
             return { status: 200, txId: txId };
           } else {

@@ -16,8 +16,7 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "@project-serum/anchor": "^0.26.0",
-    "@raydium-io/raydium-sdk-v2": "^0.1.72-alpha",
+    "@raydium-io/raydium-sdk-v2": "^0.1.92-alpha",
     "@solana/spl-token": "^0.4.8",
     "@solana/web3.js": "^1.95.3",
     "@types/node-telegram-bot-api": "^0.64.7",

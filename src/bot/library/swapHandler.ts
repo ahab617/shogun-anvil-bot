@@ -19,6 +19,7 @@ interface TBuyAndSell {
 }
 
 let swapInfo = {} as any;
+let swapSettingInfo = {} as any;
 let minimumAmount = config.minimumAmount;
 let gasFee = config.networkFee;
 let dataInfo = {} as any;
@@ -71,7 +72,7 @@ export const swapHandler = async (msg: any) => {
               selectInfo: SelectCoinInfo,
             };
           } else {
-            bot.sendMessage(msg.chat.id, `Please enter the Native Token.`);
+            bot.sendMessage(msg.chat.id, `Please Enter the Native Token.`);
             return;
           }
           swapModal(msg);
@@ -653,7 +654,7 @@ Enter the Amount per trade In Sol minimum ${minimumAmount}
                   new PublicKey(dataInfo[chatId].inToken)
                 );
                 const baseDecimal = info?.value?.data?.parsed?.info?.decimals;
-                let swapTokenInfo = {
+                swapSettingInfo[chatId] = {
                   baseToken: dataInfo[chatId].inToken,
                   baseSymbol: dataInfo[chatId].inSymbol,
                   baseName: dataInfo[chatId].inName,
@@ -671,47 +672,7 @@ Enter the Amount per trade In Sol minimum ${minimumAmount}
                   buy: BuyAndSellNumber?.buyNumber,
                   sell: BuyAndSellNumber?.sellNumber,
                 };
-                const r = await swapController.create(swapTokenInfo);
-                if (r) {
-                  bot.sendMessage(
-                    chatId,
-                    `
-  ✅  <b>Swap is valid.</b>
-                  
-  <b>BaseToken Address:</b>  ${dataInfo[chatId].inToken}
-  <b>Name: </b>  ${dataInfo[chatId].inName}
-  <b>Symbol:</b>  ${dataInfo[chatId].inSymbol}
-  <b>Balance:</b>  ${dataInfo[chatId].inBalance}
-          
-  <b>QuoteToken Address:</b>  ${dataInfo[chatId].outToken}
-  <b>Name: </b>  ${dataInfo[chatId].outName}
-  <b>Symbol:</b>  ${dataInfo[chatId].outSymbol}
-  <b>Balance:</b>  ${dataInfo[chatId].outBalance}
-          
-  <b>PairAddress:</b>  ${dataInfo[chatId].pairAddress}
-  <b>LoopTime:</b>  ${time} mins
-  <b>Buy times</b>  ${BuyAndSellNumber?.buyNumber}
-  <b>Sell times</b>  ${BuyAndSellNumber?.sellNumber}
-  <b>Swap Amount:</b>  ${Number(amountSol)}`,
-                    {
-                      parse_mode: "HTML",
-                      reply_markup: {
-                        inline_keyboard: [
-                          [
-                            {
-                              text: "👈 Return",
-                              callback_data: "return",
-                            },
-                            {
-                              text: "Delete ",
-                              callback_data: "agree_delete_swap",
-                            },
-                          ],
-                        ],
-                      },
-                    }
-                  );
-                }
+                priorityFeeInput(chatId);
               }
             } catch (error) {
               console.error("Error swap amount setting:", error);
@@ -782,7 +743,7 @@ const promptSwapAmount = async (
                   new PublicKey(dataInfo[chatId].inToken)
                 );
                 const baseDecimal = info?.value?.data?.parsed?.info?.decimals;
-                let swapTokenInfo = {
+                swapSettingInfo[chatId] = {
                   baseToken: dataInfo[chatId].inToken,
                   baseSymbol: dataInfo[chatId].inSymbol,
                   baseName: dataInfo[chatId].inName,
@@ -800,47 +761,7 @@ const promptSwapAmount = async (
                   buy: BuyAndSellNumber?.buyNumber,
                   sell: BuyAndSellNumber?.sellNumber,
                 };
-                const r = await swapController.create(swapTokenInfo);
-                if (r) {
-                  bot.sendMessage(
-                    sentMessage.chat.id,
-                    `
-  ✅  <b>Swap is valid.</b>
-                  
-  <b>BaseToken Address: </b>  ${dataInfo[chatId].inToken}
-  <b>Name: </b>  ${dataInfo[chatId].inName}
-  <b>Symbol: </b>  ${dataInfo[chatId].inSymbol}
-  <b>Balance: </b>  ${dataInfo[chatId].inBalance}
-          
-  <b>QuoteToken Address: </b>  ${dataInfo[chatId].outToken}
-  <b>Name: </b>  ${dataInfo[chatId].outName}
-  <b>Symbol: </b>  ${dataInfo[chatId].outSymbol}
-  <b>Balance: </b>  ${dataInfo[chatId].outBalance}
-          
-  <b>PairAddress:</b>  ${dataInfo[chatId].pairAddress}
-  <b>LoopTime:</b>  ${time} mins
-  <b>Buy times</b>  ${BuyAndSellNumber?.buyNumber}
-  <b>Sell times</b>  ${BuyAndSellNumber?.sellNumber}
-  <b>Swap Amount: </b>  ${Number(amountSol)}`,
-                    {
-                      parse_mode: "HTML",
-                      reply_markup: {
-                        inline_keyboard: [
-                          [
-                            {
-                              text: "👈 Return",
-                              callback_data: "return",
-                            },
-                            {
-                              text: "Delete ",
-                              callback_data: "agree_delete_swap",
-                            },
-                          ],
-                        ],
-                      },
-                    }
-                  );
-                }
+                priorityFeeInput(chatId);
               }
             } catch (error) {
               console.error("Error swap amount prompt:", error);
@@ -850,5 +771,98 @@ const promptSwapAmount = async (
       });
   } catch (error) {
     console.log("promptSwapAmountError: ", error);
+  }
+};
+
+const priorityFeeInput = async (chatId: number) => {
+  bot.sendMessage(chatId, `Please enter the priority fee for the swap.`, {
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: "🚀   High",
+            callback_data: "enterFee_high",
+          },
+        ],
+        [
+          {
+            text: "🚈   Medium",
+            callback_data: "enterFee_medium",
+          },
+        ],
+        [
+          {
+            text: "🔄   Small",
+            callback_data: "enterFee_small",
+          },
+        ],
+        [
+          {
+            text: "👈   Return",
+            callback_data: "return",
+          },
+        ],
+      ],
+    },
+  });
+};
+export const enterFeeHandler = async (msg: any, action: string) => {
+  try {
+    bot.editMessageReplyMarkup(
+      { inline_keyboard: [] },
+      { chat_id: msg.chat.id, message_id: msg.message_id }
+    );
+    const chatId = msg.chat.id;
+    const status = action.split("_")[1];
+    swapSettingInfo[msg.chat.id] = {
+      ...swapSettingInfo[msg.chat.id],
+      priorityFee: status,
+    };
+    const r = await swapController.create(swapSettingInfo[msg.chat.id]);
+    if (r) {
+      bot.sendMessage(
+        chatId,
+        `
+✅  <b>Swap is valid.</b>
+                
+<b>BaseToken Address: </b>  ${swapSettingInfo[chatId].baseToken}
+<b>Name: </b>  ${swapSettingInfo[chatId].baseName}
+<b>Symbol: </b>  ${swapSettingInfo[chatId].baseSymbol}
+<b>Balance: </b>  ${swapSettingInfo[chatId].baseBalance}
+        
+<b>QuoteToken Address: </b>  ${swapSettingInfo[chatId].quoteToken}
+<b>Name: </b>  ${swapSettingInfo[chatId].quoteName}
+<b>Symbol: </b>  ${swapSettingInfo[chatId].quoteSymbol}
+<b>Balance: </b>  ${swapSettingInfo[chatId].quoteBalance}
+        
+<b>PairAddress:</b>  ${swapSettingInfo[chatId].pairAddress}
+<b>LoopTime:</b>  ${swapSettingInfo[chatId].loopTime} mins
+<b>Buy times</b>  ${swapSettingInfo[chatId]?.buy}
+<b>Sell times</b>  ${swapSettingInfo[chatId]?.sell}
+<b>Swap Amount: </b>  ${swapSettingInfo[chatId].amount}
+<b>Priority Fee: </b> ${swapSettingInfo[chatId].priorityFee}
+  `,
+        {
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "👈 Return",
+                  callback_data: "return",
+                },
+                {
+                  text: "Delete ",
+                  callback_data: "agree_delete_swap",
+                },
+              ],
+            ],
+          },
+        }
+      );
+    }
+  } catch (error) {
+    console.log("enterFeeHandlerError: ", error);
   }
 };

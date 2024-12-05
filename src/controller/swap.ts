@@ -37,6 +37,7 @@ const swapInfo = async () => {
 
 const create = async (tokenInfo: any) => {
   try {
+    console.log(tokenInfo);
     const newSwap = new Swap(tokenInfo);
     const newSwapSave = await newSwap.save();
     if (newSwapSave) {

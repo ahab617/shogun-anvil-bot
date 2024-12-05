@@ -39,10 +39,15 @@ export class SolWalletTracker {
 
   async addWallet(
     wallet: any,
-    callback?: (wallet1: any, isDepositStatus: boolean, amount: number) => void
+    callback?: (
+      wallet1: any,
+      isDepositStatus: boolean,
+      fee: number,
+      amount: number,
+      miniAmount: number
+    ) => void
   ): Promise<void> {
     if (this.walletAddresses.has(wallet.publicKey)) {
-      console.log(`Wallet ${wallet.publicKey} is already being monitored.`);
       return;
     }
 
@@ -50,7 +55,6 @@ export class SolWalletTracker {
     try {
       const initialBalance = await this.connection.getBalance(publicKey);
       if (initialBalance === undefined) {
-        console.error("Failed to obtain initial balance.");
         return;
       }
 
@@ -65,13 +69,12 @@ export class SolWalletTracker {
         async (accountInfo: AccountInfo<Buffer>) => {
           const userData = await userList.findOne({ userId: wallet.userId });
           const currentBalance = accountInfo.lamports;
-          const r = await this.connection.getBalance(publicKey);
           const transferredAmount = currentBalance - walletInfo.previousBalance;
 
           // Update the previous balance
-          if (isDepositStatus) {
+          if (isDepositStatus[wallet.userId]?.status) {
             walletInfo.previousBalance = currentBalance;
-            depositTraker(false);
+            depositTraker(wallet.userId, false);
           } else {
             const adminList = await adminListController.find();
             if (
@@ -86,18 +89,21 @@ export class SolWalletTracker {
               const depositData = result?.result as Array<TdepositData>;
 
               if (!walletInfo.Received && transferredAmount > 0) {
-                let amount = 0;
+                let amount = transferredAmount / 1e9;
                 let flag = false;
                 if (
-                  Number(depositData[0].miniAmount) <=
+                  Number(depositData[0].miniAmount) >
                   transferredAmount / 1e9
                 ) {
-                  amount = ((transferredAmount / 1e9) * userData?.fee) / 100;
-                } else {
-                  amount = transferredAmount / 1e9;
                   flag = true;
                 }
-                const r = callback?.(wallet, flag, amount);
+                const r = callback?.(
+                  wallet,
+                  flag,
+                  userData?.fee,
+                  amount,
+                  Number(depositData[0].miniAmount)
+                );
                 if (r) {
                   if (
                     Number(depositData[0].miniAmount) <=
@@ -136,7 +142,6 @@ export class SolWalletTracker {
     subscriptionId?: number
   ): Promise<void> {
     if (!this.walletAddresses.has(walletAddress)) {
-      console.log(`Wallet ${walletAddress} is not being monitored.`);
       return;
     }
 
@@ -145,7 +150,6 @@ export class SolWalletTracker {
     }
 
     this.walletAddresses.delete(walletAddress);
-    console.log(`Removed ${walletAddress} from monitoring list.`);
   }
 
   getTrackedWallets(): string[] {

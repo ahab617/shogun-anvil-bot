@@ -18,8 +18,8 @@ const find = async (props: any) => {
 
 const create = async (props: any) => {
   try {
-    const { filter } = props;
-    const result = await Withdraw.find(filter);
+    const newWithdraw = new Withdraw(props);
+    const result = await newWithdraw.save();
     return result;
   } catch (error) {
     throw new Error("Failed to create withdrawInfo");

@@ -45,5 +45,6 @@ export const checkSplTokenBalance = async (
     return Number(tokenBalance.value.uiAmount);
   } catch (error) {
     console.log("checkSplTokenBalanceError: ", error);
+    return null;
   }
 };

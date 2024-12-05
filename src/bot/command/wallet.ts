@@ -18,7 +18,6 @@ export default new Commands(
       return;
     }
     const userpermission = await userList.findOne({ userId: msg.chat.id });
-    console.log(userpermission);
     if (!userpermission?.permission) {
       bot.sendMessage(
         msg.chat.id,

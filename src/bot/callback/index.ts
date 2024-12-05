@@ -8,7 +8,11 @@ import {
   allWithdrawHandler,
   someWithdrawHandler,
 } from "../library/withdrawhandler";
-import { swapSettingHandler, swapConfirmHandler } from "../library/swapHandler";
+import {
+  swapSettingHandler,
+  swapConfirmHandler,
+  enterFeeHandler,
+} from "../library/swapHandler";
 import {
   deleteWallethandler,
   confirmHandler,
@@ -50,6 +54,8 @@ export const callBackHandler = async (msg: any, action: string | any) => {
         allWithdrawHandler(msg, action);
       } else if (action.startsWith("amountSome_")) {
         someWithdrawHandler(msg, action);
+      } else if (action.startsWith("enterFee_")) {
+        enterFeeHandler(msg, action);
       }
       break;
     }

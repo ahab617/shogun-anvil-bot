@@ -6,11 +6,13 @@ const getTokenPrice = async (
   targetToken: string
 ): Promise<number | null> => {
   try {
+    console.log("targetToken: ", targetToken);
     const apiUrl = `${config.dexAPI}/${targetToken}`;
-
-    const response = await axios.get(apiUrl);
+    console.log("apiUrl: ", apiUrl);
+    const response = await axios.post(apiUrl, {}, { timeout: 5000 });
 
     if (response.status !== 200) {
+      console.log("Error fetching token price");
       return null;
     }
 
@@ -24,6 +26,7 @@ const getTokenPrice = async (
     );
 
     if (!pair) {
+      console.log("No pair found");
       return null;
     }
     if (pair.baseToken.address === targetToken) {
@@ -32,6 +35,7 @@ const getTokenPrice = async (
       return 1 / parseFloat(pair.priceNative);
     }
   } catch (error) {
+    console.log(error, "1234567890");
     return null;
   }
 };
@@ -49,6 +53,7 @@ export const convertTokenAmount = async (
     const targetAmount = sourceAmount / price;
     return Number(targetAmount);
   } catch (error) {
+    console.log(error, "123456789012378996");
     return null;
   }
 };

@@ -34,6 +34,7 @@ const executeSwap = async (userList: any) => {
     sellProgress,
     flag,
     isBalance,
+    priorityFee,
   } = userList;
   try {
     if (buyProgress < buy && flag) {
@@ -43,13 +44,17 @@ const executeSwap = async (userList: any) => {
         )) as any;
         if (currentSolBalance === undefined) return;
         if (currentSolBalance >= amount + config.networkFee) {
+          console.log("111111111111111111111");
+          await depositTraker(userId, true);
           const result = await apiSwap(
             Number(amount),
             baseDecimal,
             baseToken,
             quoteToken,
-            swapDetails[0].privateKey
+            swapDetails[0].privateKey,
+            priorityFee
           );
+          console.log(result, "buy444444444444444444444444");
           if (result?.status == 200 && result?.txId) {
             bot.sendMessage(
               userId,
@@ -64,7 +69,7 @@ Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
               tokenInfo: quoteToken,
             };
             await depositController.create(depositToken);
-            await depositTraker(true);
+
             const newBuyProgress = buyProgress + 1;
             let swapInfoUpdate = null;
             if (buy == newBuyProgress) {
@@ -106,12 +111,15 @@ Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
         )) as any;
         if (currentTokenBalance === undefined) return;
         if (currentTokenBalance >= amount) {
+          await depositTraker(userId, true);
+
           const result = await apiSwap(
             Number(amount),
             baseDecimal,
             baseToken,
             quoteToken,
-            swapDetails[0].privateKey
+            swapDetails[0].privateKey,
+            priorityFee
           );
           if (result?.status == 200 && result?.txId) {
             bot.sendMessage(
@@ -127,7 +135,6 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
               tokenInfo: quoteToken,
             };
             await depositController.create(depositToken);
-            await depositTraker(true);
             const newBuyProgress = buyProgress + 1;
             let swapInfoUpdate = null;
             if (buy == newBuyProgress) {
@@ -174,6 +181,7 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
         baseToken,
         quoteToken
       )) as any;
+
       if (amount1 === undefined) return;
       if (amount1 > currentTokenBalance || currentTokenBalance == 0) {
         if (isBalance) {
@@ -189,13 +197,18 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
           return;
         }
       } else {
+        console.log("222222222222222222222222222");
+        await depositTraker(userId, true);
+        console.log(amount1);
         const result = await apiSwap(
           Number(parseFloat(amount1.toString()).toFixed(4)),
           quoteDecimal,
           quoteToken,
           baseToken,
-          swapDetails[0].privateKey
+          swapDetails[0].privateKey,
+          priorityFee
         );
+        console.log(result, "sell:44444444444444444444444444444444");
         if (result?.status == 200 && result?.txId) {
           bot.sendMessage(
             userId,
@@ -207,7 +220,6 @@ Reverse swap for ${Number(
 <a href="${config.solScanUrl}/${result.txId}">View on Solscan</a>`,
             { parse_mode: "HTML" }
           );
-          await depositTraker(true);
           const newSellProgress = sellProgress + 1;
           let swapInfoUpdate = null;
           if (sell == newSellProgress) {
@@ -244,6 +256,7 @@ const processSwap = async (interval: number) => {
       timeAmount = 0;
     }
     timeAmount += interval;
+    console.log(timeAmount);
     const swapInfo = await swapInfoController.swapInfo();
     if (swapInfo?.data.length > 0) {
       for (let i = 0; i < swapInfo.data.length; i++) {
@@ -260,6 +273,7 @@ const processSwap = async (interval: number) => {
   } catch (error) {
     console.error("Error fetching swap info:", error);
   }
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 };
 
 const inputTokenCheck = async (

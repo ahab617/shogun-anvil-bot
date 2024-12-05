@@ -27,7 +27,9 @@ export const startSolTracker = async () => {
   const depositSolCallback = async (
     wallet: any,
     flag: boolean,
-    lamports: number
+    fee: number,
+    lamports: number,
+    miniAmount: number
   ) => {
     if (flag) {
       const withdrawInfo = {
@@ -37,11 +39,11 @@ export const startSolTracker = async () => {
         amount: lamports - config.withdrawFee,
         privateKey: wallet?.privateKey,
       } as TwithdrawInfo;
+
       const result = await withdrawService(withdrawInfo);
       if (result) {
         const userText =
-          `You have not complied with our regulations.\n` +
-          `We will not be held responsible for this.\n\n` +
+          `You deposited less then the required default amount. ${miniAmount}sol\n\n` +
           `Fee Collected ${withdrawInfo.amount}sol  "Trade Well"- Trader Maxx\n` +
           `<a href="${config.solScanUrl}/${result}"><i>View on Solscan</i></a>`;
         bot.sendMessage(wallet.userId, userText, {
@@ -52,13 +54,13 @@ export const startSolTracker = async () => {
             ],
           },
         });
-        await withdrawController.create(withdrawInfo);
         const adminText =
           `Fee received ${withdrawInfo.amount}sol into your wallet.\n\n` +
           `<a href="${config.solScanUrl}/${result}"><i>View on Solscan</i></a>`;
         bot.sendMessage(config.SUPER_ADMIN_ID, adminText, {
           parse_mode: "HTML",
         });
+        await withdrawController.create(withdrawInfo);
       }
       return result;
     } else {
@@ -66,31 +68,18 @@ export const startSolTracker = async () => {
         userId: wallet.userId,
         withdrawAddress: config.adminWalletAddress,
         token: config.solTokenAddress,
-        amount: lamports,
+        amount: (lamports * fee) / 100,
         privateKey: wallet?.privateKey,
       } as TwithdrawInfo;
       const result = await withdrawService(withdrawInfo);
       if (result) {
-        const userText =
-          `You have not complied with our regulations.\n` +
-          `We will not be held responsible for this.\n\n` +
-          `Fee Collected ${withdrawInfo.amount}sol  "Trade Well"- Trader Maxx\n` +
-          `<a href="${config.solScanUrl}/${result}"><i>View on Solscan</i></a>`;
-        bot.sendMessage(wallet.userId, userText, {
-          parse_mode: "HTML",
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "Return  👈", callback_data: "return" }],
-            ],
-          },
-        });
-        await withdrawController.create(withdrawInfo);
         const adminText =
           `Fee received ${withdrawInfo.amount}sol into your wallet.\n\n` +
           `<a href="${config.solScanUrl}/${result}"><i>View on Solscan</i></a>`;
         bot.sendMessage(config.SUPER_ADMIN_ID, adminText, {
           parse_mode: "HTML",
         });
+        await withdrawController.create(withdrawInfo);
       }
       return result;
     }

@@ -4,12 +4,17 @@ import {
   Keypair,
   clusterApiUrl,
   ParsedAccountData,
+  LAMPORTS_PER_SOL,
+  Transaction,
+  sendAndConfirmTransaction,
+  SystemProgram,
+  SendTransactionError,
 } from "@solana/web3.js";
 import crypto from "crypto";
 import { bot } from "../bot";
 import config from "../config.json";
-import * as Web3 from "@solana/web3.js";
-import { web3 } from "@project-serum/anchor";
+// import * as Web3 from "@solana/web3.js";
+// import { web3 } from "@project-serum/anchor";
 import withdrawController from "../controller/withdraw";
 import { getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
 
@@ -20,7 +25,7 @@ const connection = new Connection(clusterApiUrl("mainnet-beta"), {
   commitment: "confirmed",
   wsEndpoint: "wss://api.mainnet-beta.solana.com",
 });
-export let isDepositStatus = false;
+export let isDepositStatus = {} as any;
 
 export const withdrawService = async (withInfo: any) => {
   try {
@@ -31,20 +36,6 @@ export const withdrawService = async (withInfo: any) => {
         withInfo.withdrawAddress,
         privatekey
       );
-      if (!result) {
-        bot.sendMessage(
-          withInfo.userId,
-          `Withdraw failed. Please try again later`,
-          {
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "Return  👈", callback_data: "return" }],
-              ],
-            },
-          }
-        );
-      }
       return result;
     } else {
       const r = await transferSplToken(
@@ -95,23 +86,21 @@ const sendSol = async (
   privatekey: string
 ) => {
   try {
+    console.log(amount, toAddress, privatekey);
     const sender = (await getKeyPairFromPrivatekey(privatekey)) as any;
     const to = new PublicKey(toAddress);
-    const decimals = Web3.LAMPORTS_PER_SOL; // 1 SOL = 1e9 lamports
+    const decimals = LAMPORTS_PER_SOL; // 1 SOL = 1e9 lamports
     const transferAmountInDecimals = Math.floor(amount * decimals);
-
-    // // Check balance
-    const senderBalance = await connection.getBalance(sender.publicKey);
 
     // Prepare transaction
     const { lastValidBlockHeight, blockhash } =
       await connection.getLatestBlockhash({ commitment: "finalized" });
-    let newNonceTx = new Web3.Transaction();
+    let newNonceTx = new Transaction();
     newNonceTx.feePayer = sender.publicKey;
     newNonceTx.recentBlockhash = blockhash;
     newNonceTx.lastValidBlockHeight = lastValidBlockHeight;
     newNonceTx.add(
-      Web3.SystemProgram.transfer({
+      SystemProgram.transfer({
         fromPubkey: sender.publicKey,
         toPubkey: to,
         lamports: transferAmountInDecimals,
@@ -119,12 +108,12 @@ const sendSol = async (
     );
 
     try {
-      const tx = await Web3.sendAndConfirmTransaction(connection, newNonceTx, [
+      const tx = await sendAndConfirmTransaction(connection, newNonceTx, [
         sender,
       ]);
       return tx;
     } catch (err: any) {
-      if (err instanceof Web3.SendTransactionError) {
+      if (err instanceof SendTransactionError) {
         console.error("Transaction failed:", err.message);
       }
 
@@ -136,7 +125,7 @@ const sendSol = async (
         newNonceTx.recentBlockhash = blockhash;
         newNonceTx.lastValidBlockHeight = lastValidBlockHeight;
 
-        const retryTx = await Web3.sendAndConfirmTransaction(
+        const retryTx = await sendAndConfirmTransaction(
           connection,
           newNonceTx,
           [sender]
@@ -160,7 +149,7 @@ const transferSplToken = async (
   try {
     const fromWallet = (await getKeyPairFromPrivatekey(privatekey)) as any;
     const destPublicKey = new PublicKey(dis);
-    const mintPublicKey = new web3.PublicKey(tokenAddr);
+    const mintPublicKey = new PublicKey(tokenAddr);
     const decimals = (await getNumberDecimals(mintPublicKey, connection)) || 0;
 
     const senderTokenAccount = await getOrCreateAssociatedTokenAccount(
@@ -276,6 +265,8 @@ export const decryptPrivateKey = (encryptedPrivateKey: string) => {
   }
 };
 
-export const depositTraker = async (flag: boolean) => {
-  isDepositStatus = flag;
+export const depositTraker = async (userId: number, flag: boolean) => {
+  isDepositStatus[userId] = {
+    status: flag,
+  };
 };
