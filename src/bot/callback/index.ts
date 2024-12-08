@@ -12,6 +12,9 @@ import {
   swapSettingHandler,
   swapConfirmHandler,
   enterFeeHandler,
+  swapDeleteHandler,
+  swapStopHandler,
+  swapActiveHandler,
 } from "../library/swapHandler";
 import {
   deleteWallethandler,
@@ -44,7 +47,7 @@ export const callBackHandler = async (msg: any, action: string | any) => {
         withdrawSelectHandler(msg, action);
       } else if (action.startsWith("selectCoin")) {
         swapSettingHandler(msg);
-      } else if (action.startsWith("agree_delete_swap")) {
+      } else if (action.startsWith("agree_swap_delete")) {
         swapConfirmHandler(msg);
       } else if (action.startsWith("inputToken_txSignature")) {
         inputToken_txSignature(msg);
@@ -56,6 +59,12 @@ export const callBackHandler = async (msg: any, action: string | any) => {
         someWithdrawHandler(msg, action);
       } else if (action.startsWith("enterFee_")) {
         enterFeeHandler(msg, action);
+      } else if (action.startsWith("swap_delete")) {
+        swapDeleteHandler(msg);
+      } else if (action.startsWith("swap_stop")) {
+        swapStopHandler(msg);
+      } else if (action.startsWith("swap_active")) {
+        swapActiveHandler(msg);
       }
       break;
     }

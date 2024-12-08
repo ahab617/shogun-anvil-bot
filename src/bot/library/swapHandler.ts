@@ -23,14 +23,14 @@ let swapSettingInfo = {} as any;
 let minimumAmount = config.minimumAmount;
 let gasFee = config.networkFee;
 let dataInfo = {} as any;
-
+let swapTokenInfo = {} as any;
 export const swapHandler = async (msg: any) => {
   try {
     removeAnswerCallback(msg.chat);
     const tokenInfo = await tokenSettingController.findOne({
       filter: { userId: msg.chat.id },
     });
-    const swapTokenInfo = await swapController.findOne({
+    swapTokenInfo[msg.chat.id] = await swapController.findOne({
       filter: { userId: msg.chat.id },
     });
     const walletInfo = await walletController.findOne({
@@ -38,10 +38,10 @@ export const swapHandler = async (msg: any) => {
     });
 
     if (!walletInfo) {
-      bot.sendMessage(msg.chat.id, `Create the your wallet.`, {});
+      await bot.sendMessage(msg.chat.id, `Create the your wallet.`, {});
       return;
     }
-    if (swapTokenInfo?.status == 404) {
+    if (swapTokenInfo[msg.chat.id]?.status == 404) {
       try {
         if (tokenInfo) {
           let walletPublicKey = walletInfo?.publicKey;
@@ -113,25 +113,25 @@ Please set the token to swap
       } catch (error) {
         console.error("Error in token swapping logic:", error);
       }
-    } else if (swapTokenInfo?.status == 200) {
-      const activeOption = swapTokenInfo.data.active
-        ? [[{ text: "Stop", callback_data: "stop_swap" }]]
-        : [[{ text: "Active", callback_data: "active_swap" }]];
-      bot.sendMessage(
+    } else if (swapTokenInfo[msg.chat.id]?.status == 200) {
+      const activeOption = swapTokenInfo[msg.chat.id].data.active
+        ? [[{ text: "Stop", callback_data: "swap_stop" }]]
+        : [[{ text: "Active", callback_data: "swap_active" }]];
+      await bot.sendMessage(
         msg.chat.id,
         `Swap information already exists.
-<b>BaseToken: </b> ${swapTokenInfo.data.baseToken}
-<b>Name: </b>  ${swapTokenInfo.data.baseName}
-<b>Symbol: </b>  ${swapTokenInfo.data.baseSymbol}
+<b>BaseToken: </b> ${swapTokenInfo[msg.chat.id].data.baseToken}
+<b>Name: </b>  ${swapTokenInfo[msg.chat.id].data.baseName}
+<b>Symbol: </b>  ${swapTokenInfo[msg.chat.id].data.baseSymbol}
 
-<b>QuoteToken: </b> ${swapTokenInfo.data.quoteToken}
-<b>Name: </b>  ${swapTokenInfo.data.quoteName}
-<b>Symbol: </b>  ${swapTokenInfo.data.quoteSymbol}
+<b>QuoteToken: </b> ${swapTokenInfo[msg.chat.id].data.quoteToken}
+<b>Name: </b>  ${swapTokenInfo[msg.chat.id].data.quoteName}
+<b>Symbol: </b>  ${swapTokenInfo[msg.chat.id].data.quoteSymbol}
 
-<b>Swap Amount:: </b> ${swapTokenInfo.data.amount} 
-<b>LoopTime: </b> ${swapTokenInfo.data.loopTime} mins
-<b>Buy times: </b> ${swapTokenInfo.data.buy} 
-<b>Sell times: </b> ${swapTokenInfo.data.sell}
+<b>Swap Amount:: </b> ${swapTokenInfo[msg.chat.id].data.amount} 
+<b>LoopTime: </b> ${swapTokenInfo[msg.chat.id].data.loopTime} mins
+<b>Buy times: </b> ${swapTokenInfo[msg.chat.id].data.buy} 
+<b>Sell times: </b> ${swapTokenInfo[msg.chat.id].data.sell}
   `,
         {
           parse_mode: "HTML",
@@ -140,131 +140,14 @@ Please set the token to swap
               ...activeOption,
               [
                 { text: "👈 Return", callback_data: "return" },
-                { text: "Reset ", callback_data: "delete_swap" },
+                { text: "Reset ", callback_data: "swap_delete" },
               ],
             ],
           },
         }
       );
-
-      bot.on("callback_query", async function onCallbackQuery(callbackQuery) {
-        const action = callbackQuery.data;
-        const chatId = callbackQuery.message?.chat.id as number;
-        if (action?.startsWith("delete_swap")) {
-          const r = await swapController.deleteOne({
-            filter: { userId: chatId },
-          });
-          if (r) {
-            bot.sendMessage(chatId, `Delete is completed successfully.`, {
-              parse_mode: "HTML",
-              reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: "👈 Return",
-                      callback_data: "return",
-                    },
-                  ],
-                ],
-              },
-            });
-          } else {
-            bot.sendMessage(chatId, `Delete failed. Please try again later.`, {
-              parse_mode: "HTML",
-              reply_markup: {
-                inline_keyboard: [
-                  [
-                    {
-                      text: "👈 Return",
-                      callback_data: "return",
-                    },
-                  ],
-                ],
-              },
-            });
-          }
-        } else if (action?.startsWith("stop_swap")) {
-          const r = {
-            userId: swapTokenInfo.data.userId,
-            active: false,
-          };
-          await swapController.updateOne(r);
-          bot.deleteMessage(
-            chatId,
-            callbackQuery.message?.message_id as number
-          );
-          bot.sendMessage(
-            chatId,
-            `
-          Swap information already exists.
-<b>BaseToken: </b> ${swapTokenInfo.data.baseToken}
-<b>Name: </b>  ${swapTokenInfo.data.baseName}
-<b>Symbol: </b>  ${swapTokenInfo.data.baseSymbol}
-
-<b>QuoteToken: </b> ${swapTokenInfo.data.quoteToken}
-<b>Name: </b>  ${swapTokenInfo.data.quoteName}
-<b>Symbol: </b>  ${swapTokenInfo.data.quoteSymbol}
-
-<b>Swap Amount:: </b> ${swapTokenInfo.data.amount} 
-<b>LoopTime: </b> ${swapTokenInfo.data.loopTime} mins
-<b>Buy times: </b> ${swapTokenInfo.data.buy} 
-<b>Sell times: </b> ${swapTokenInfo.data.sell}`,
-            {
-              parse_mode: "HTML",
-              reply_markup: {
-                inline_keyboard: [
-                  [{ text: "Active", callback_data: "active_swap" }],
-                  [
-                    { text: "👈 Return", callback_data: "return" },
-                    { text: "Reset ", callback_data: "delete_swap" },
-                  ],
-                ],
-              },
-            }
-          );
-        } else if (action?.startsWith("active_swap")) {
-          const r = {
-            userId: swapTokenInfo.data.userId,
-            active: true,
-          };
-          await swapController.updateOne(r);
-          bot.deleteMessage(
-            chatId,
-            callbackQuery.message?.message_id as number
-          );
-          bot.sendMessage(
-            chatId,
-            `
-          Swap information already exists.
-<b>BaseToken: </b> ${swapTokenInfo.data.baseToken}
-<b>Name: </b>  ${swapTokenInfo.data.baseName}
-<b>Symbol: </b>  ${swapTokenInfo.data.baseSymbol}
-
-<b>QuoteToken: </b> ${swapTokenInfo.data.quoteToken}
-<b>Name: </b>  ${swapTokenInfo.data.quoteName}
-<b>Symbol: </b>  ${swapTokenInfo.data.quoteSymbol}
-
-<b>Swap Amount:: </b> ${swapTokenInfo.data.amount} 
-<b>LoopTime: </b> ${swapTokenInfo.data.loopTime} mins
-<b>Buy times: </b> ${swapTokenInfo.data.buy} 
-<b>Sell times: </b> ${swapTokenInfo.data.sell}`,
-            {
-              parse_mode: "HTML",
-              reply_markup: {
-                inline_keyboard: [
-                  [{ text: "Stop", callback_data: "stop_swap" }],
-                  [
-                    { text: "👈 Return", callback_data: "return" },
-                    { text: "Reset ", callback_data: "delete_swap" },
-                  ],
-                ],
-              },
-            }
-          );
-        }
-      });
     } else {
-      bot.sendMessage(msg.chat.id, `${swapTokenInfo?.message}`, {
+      await bot.sendMessage(msg.chat.id, `${swapTokenInfo?.message}`, {
         parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [[{ text: "👈 Return", callback_data: "return" }]],
@@ -273,6 +156,129 @@ Please set the token to swap
     }
   } catch (error) {
     console.error("Error swap setting: ", error);
+  }
+};
+export const swapDeleteHandler = async (msg: any) => {
+  try {
+    const chatId = msg.chat.id;
+    const r = await swapController.deleteOne({
+      filter: { userId: chatId },
+    });
+    if (r) {
+      await bot.sendMessage(chatId, `Delete is completed successfully.`, {
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "👈 Return",
+                callback_data: "return",
+              },
+            ],
+          ],
+        },
+      });
+    } else {
+      await bot.sendMessage(chatId, `Delete failed. Please try again later.`, {
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "👈 Return",
+                callback_data: "return",
+              },
+            ],
+          ],
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Error swap setting: ", error);
+  }
+};
+
+export const swapStopHandler = async (msg: any) => {
+  try {
+    const chatId = msg.chat.id;
+    const r = {
+      userId: swapTokenInfo[msg.chat.id].data.userId,
+      active: false,
+    };
+    await swapController.updateOne(r);
+    await bot.deleteMessage(chatId, msg.message_id as number);
+    await bot.sendMessage(
+      chatId,
+      `
+<b>BaseToken: </b> ${swapTokenInfo[msg.chat.id].data.baseToken}
+<b>Name: </b>  ${swapTokenInfo[msg.chat.id].data.baseName}
+<b>Symbol: </b>  ${swapTokenInfo[msg.chat.id].data.baseSymbol}
+
+<b>QuoteToken: </b> ${swapTokenInfo[msg.chat.id].data.quoteToken}
+<b>Name: </b>  ${swapTokenInfo[msg.chat.id].data.quoteName}
+<b>Symbol: </b>  ${swapTokenInfo[msg.chat.id].data.quoteSymbol}
+
+<b>Swap Amount:: </b> ${swapTokenInfo[msg.chat.id].data.amount} 
+<b>LoopTime: </b> ${swapTokenInfo[msg.chat.id].data.loopTime} mins
+<b>Buy times: </b> ${swapTokenInfo[msg.chat.id].data.buy} 
+<b>Sell times: </b> ${swapTokenInfo[msg.chat.id].data.sell}`,
+      {
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "Active", callback_data: "swap_active" }],
+            [
+              { text: "👈 Return", callback_data: "return" },
+              { text: "Reset ", callback_data: "swap_delete" },
+            ],
+          ],
+        },
+      }
+    );
+  } catch (error) {
+    console.log("swapStopHandler error:", error);
+  }
+};
+
+export const swapActiveHandler = async (msg: any) => {
+  try {
+    const chatId = msg.chat.id;
+    const r = {
+      userId: swapTokenInfo[msg.chat.id].data.userId,
+      active: true,
+    };
+    await swapController.updateOne(r);
+    await bot.deleteMessage(chatId, msg?.message_id as number);
+    await bot.sendMessage(
+      chatId,
+      `
+<b>BaseToken: </b> ${swapTokenInfo[msg.chat.id].data.baseToken}
+<b>Name: </b>  ${swapTokenInfo[msg.chat.id].data.baseName}
+<b>Symbol: </b>  ${swapTokenInfo[msg.chat.id].data.baseSymbol}
+
+<b>QuoteToken: </b> ${swapTokenInfo[msg.chat.id].data.quoteToken}
+<b>Name: </b>  ${swapTokenInfo[msg.chat.id].data.quoteName}
+<b>Symbol: </b>  ${swapTokenInfo[msg.chat.id].data.quoteSymbol}
+
+<b>Swap Amount:: </b> ${swapTokenInfo[msg.chat.id].data.amount} 
+<b>LoopTime: </b> ${swapTokenInfo[msg.chat.id].data.loopTime} mins
+<b>Buy times: </b> ${swapTokenInfo[msg.chat.id].data.buy} 
+<b>Sell times: </b> ${swapTokenInfo[msg.chat.id].data.sell}`,
+      {
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "Stop", callback_data: "swap_stop" }],
+            [
+              { text: "👈 Return", callback_data: "return" },
+              { text: "Reset ", callback_data: "swap_delete" },
+            ],
+          ],
+        },
+      }
+    );
+  } catch (error) {
+    console.log("swapActiveHandler error:", error);
   }
 };
 
@@ -291,7 +297,7 @@ export const swapSettingHandler = async (msg: any) => {
         "/activity",
       ].includes(msg.text)
     ) {
-      bot.editMessageReplyMarkup(
+      await bot.editMessageReplyMarkup(
         { inline_keyboard: [] },
         { chat_id: msg.chat.id, message_id: msg.message_id }
       );
@@ -299,7 +305,7 @@ export const swapSettingHandler = async (msg: any) => {
     const newText =
       `Time between trades (mins) EG. 5\n` +
       `Note: this can be 5, 10 even 60\n`;
-    bot
+    await bot
       .sendMessage(msg.chat.id, newText, {
         parse_mode: "HTML",
         reply_markup: {
@@ -307,7 +313,7 @@ export const swapSettingHandler = async (msg: any) => {
         },
       })
       .then(async (sentMessage) => {
-        bot.onReplyToMessage(
+        await bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -330,7 +336,7 @@ export const swapSettingHandler = async (msg: any) => {
             if (!Number.isInteger(Number(time)) || Number(time) < 1) {
               isValidTime(msg);
             } else {
-              const loopTime = time;
+              const loopTime = Number(time);
               BuyAndSellInput(msg, loopTime);
             }
           }
@@ -343,7 +349,7 @@ export const swapSettingHandler = async (msg: any) => {
 
 export const swapConfirmHandler = async (msg: any) => {
   try {
-    bot.sendMessage(
+    await bot.sendMessage(
       msg.chat.id,
       `
   Do you really want to delete this swap?`,
@@ -353,45 +359,12 @@ export const swapConfirmHandler = async (msg: any) => {
           inline_keyboard: [
             [
               { text: "👈 Return", callback_data: "return" },
-              { text: "OK ", callback_data: "delete_swap" },
+              { text: "OK ", callback_data: "swap_delete" },
             ],
           ],
         },
       }
     );
-    bot.on("callback_query", async function onCallbackQuery(callbackQuery) {
-      const action = callbackQuery.data;
-      const chatId = callbackQuery.message?.chat.id as number;
-      if (action?.startsWith("delete_swap")) {
-        const r = await swapController.deleteOne({
-          filter: { userId: chatId },
-        });
-        if (r) {
-          bot.sendMessage(chatId, `Delete is completed successfully.`, {
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "👈 Return", callback_data: "return" }],
-              ],
-            },
-          });
-        } else {
-          bot.sendMessage(chatId, `Delete failed. Please try again later.`, {
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  {
-                    text: "👈 Return",
-                    callback_data: "return",
-                  },
-                ],
-              ],
-            },
-          });
-        }
-      }
-    });
   } catch (error) {
     console.log("swapConfirmHandlerError: ", error);
   }
@@ -402,7 +375,7 @@ const BuyAndSellInput = async (msg: any, time: number) => {
     const newText =
       `Choose Buy/Sell ratio: 2 buys to 1 sell EG. 2_1\n` +
       `Note: keep it simple. 2_1 , 1_1, 3_2\n`;
-    bot
+    await bot
       .sendMessage(msg.chat.id, newText, {
         parse_mode: "HTML",
         reply_markup: {
@@ -410,7 +383,7 @@ const BuyAndSellInput = async (msg: any, time: number) => {
         },
       })
       .then(async (sentMessage) => {
-        bot.onReplyToMessage(
+        await bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -439,10 +412,10 @@ const BuyAndSellInput = async (msg: any, time: number) => {
               return isValidBuyAndSell(msg.chat.id, time);
             } else {
               const BuyAndSellNumber = {
-                buyNumber: InputNumber.split("_")[0],
-                sellNumber: InputNumber.split("_")[1],
+                buyNumber: Number(InputNumber.split("_")[0]),
+                sellNumber: Number(InputNumber.split("_")[1]),
               } as TBuyAndSell;
-              SwapAmountHandler(msg.chat.id, time, BuyAndSellNumber);
+              await SwapAmountHandler(msg.chat.id, time, BuyAndSellNumber);
             }
           }
         );
@@ -456,7 +429,7 @@ const swapModal = async (msg: any) => {
   swapInfo[msg.chat.id]?.selectInfo.push([
     { text: "Return  👈", callback_data: "return" },
   ]);
-  bot.sendMessage(msg.chat.id, `<b>Select Coin.</b>`, {
+  await bot.sendMessage(msg.chat.id, `<b>Select Coin.</b>`, {
     parse_mode: "HTML",
     reply_markup: {
       inline_keyboard: swapInfo[msg.chat.id]?.selectInfo,
@@ -466,7 +439,7 @@ const swapModal = async (msg: any) => {
 const isValidTime = async (msg: any) => {
   try {
     const newText = `Please enter the valid number type(>1).`;
-    bot
+    await bot
       .sendMessage(msg.chat.id, newText, {
         parse_mode: "HTML",
         reply_markup: {
@@ -474,7 +447,7 @@ const isValidTime = async (msg: any) => {
         },
       })
       .then(async (sentMessage) => {
-        bot.onReplyToMessage(
+        await bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -497,7 +470,7 @@ const isValidTime = async (msg: any) => {
             if (!Number.isInteger(Number(time)) || Number(time) < 1) {
               return isValidTime(msg);
             } else {
-              const loopTime = time;
+              const loopTime = Number(time);
               BuyAndSellInput(msg, loopTime);
             }
           }
@@ -510,15 +483,15 @@ const isValidTime = async (msg: any) => {
 const isValidBuyAndSell = async (chatId: any, time: number) => {
   try {
     const newText = `Please enter the valid type.\n\n` + `ex: 3_5`;
-    bot
+    await bot
       .sendMessage(chatId, newText, {
         parse_mode: "HTML",
         reply_markup: {
           force_reply: true,
         },
       })
-      .then((sentMessage) => {
-        bot.onReplyToMessage(
+      .then(async (sentMessage) => {
+        await bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -547,10 +520,10 @@ const isValidBuyAndSell = async (chatId: any, time: number) => {
               return isValidBuyAndSell(chatId, time);
             } else {
               const BuyAndSellNumber = {
-                buyNumber: InputNumber.split("_")[0],
-                sellNumber: InputNumber.split("_")[1],
+                buyNumber: Number(InputNumber.split("_")[0]),
+                sellNumber: Number(InputNumber.split("_")[1]),
               } as TBuyAndSell;
-              SwapAmountHandler(chatId, time, BuyAndSellNumber);
+              await SwapAmountHandler(chatId, time, BuyAndSellNumber);
             }
           }
         );
@@ -573,11 +546,11 @@ const shortenString = async (
 const SwapAmountHandler = async (
   chatId: any,
   time: number,
-  BuyAndSellNumber: any
+  BuyAndSellNumber: TBuyAndSell
 ) => {
   try {
     if (dataInfo[chatId].inBalance < minimumAmount + gasFee) {
-      bot.sendMessage(
+      await bot.sendMessage(
         chatId,
         `
 Wallet Insufficient funds
@@ -599,7 +572,7 @@ Wallet Insufficient funds
       );
       return;
     } else {
-      bot.sendMessage(
+      await bot.sendMessage(
         chatId,
         `
 Enter the Amount per trade In Sol minimum ${minimumAmount}
@@ -608,7 +581,7 @@ Enter the Amount per trade In Sol minimum ${minimumAmount}
       );
     }
 
-    bot
+    await bot
       .sendMessage(
         chatId,
         `
@@ -621,7 +594,7 @@ Enter the Amount per trade In Sol minimum ${minimumAmount}
         }
       )
       .then(async (sentMessage) => {
-        bot.onReplyToMessage(
+        await bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -691,13 +664,13 @@ const promptSwapAmount = async (
   BuyAndSellNumber: any
 ) => {
   try {
-    bot.sendMessage(
+    await bot.sendMessage(
       chatId,
       `
   <b>Current Balance: </b> ${dataInfo[chatId].inBalance}  ${dataInfo[chatId].inSymbol}`,
       { parse_mode: "HTML" }
     );
-    bot
+    await bot
       .sendMessage(
         chatId,
         `
@@ -710,7 +683,7 @@ const promptSwapAmount = async (
         }
       )
       .then(async (sentMessage) => {
-        bot.onReplyToMessage(
+        await bot.onReplyToMessage(
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
@@ -775,7 +748,7 @@ const promptSwapAmount = async (
 };
 
 const priorityFeeInput = async (chatId: number) => {
-  bot.sendMessage(chatId, `Please enter the priority fee for the swap.`, {
+  await bot.sendMessage(chatId, `Please enter the priority fee for the swap.`, {
     parse_mode: "HTML",
     reply_markup: {
       inline_keyboard: [
@@ -809,7 +782,7 @@ const priorityFeeInput = async (chatId: number) => {
 };
 export const enterFeeHandler = async (msg: any, action: string) => {
   try {
-    bot.editMessageReplyMarkup(
+    await bot.editMessageReplyMarkup(
       { inline_keyboard: [] },
       { chat_id: msg.chat.id, message_id: msg.message_id }
     );
@@ -821,7 +794,7 @@ export const enterFeeHandler = async (msg: any, action: string) => {
     };
     const r = await swapController.create(swapSettingInfo[msg.chat.id]);
     if (r) {
-      bot.sendMessage(
+      await bot.sendMessage(
         chatId,
         `
 ✅  <b>Swap is valid.</b>
@@ -854,7 +827,7 @@ export const enterFeeHandler = async (msg: any, action: string) => {
                 },
                 {
                   text: "Delete ",
-                  callback_data: "agree_delete_swap",
+                  callback_data: "agree_swap_delete",
                 },
               ],
             ],

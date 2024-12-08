@@ -44,7 +44,6 @@ const executeSwap = async (userList: any) => {
         )) as any;
         if (currentSolBalance === undefined) return;
         if (currentSolBalance >= amount + config.networkFee) {
-          console.log("111111111111111111111");
           await depositTraker(userId, true);
           const result = await apiSwap(
             Number(amount),
@@ -54,7 +53,6 @@ const executeSwap = async (userList: any) => {
             swapDetails[0].privateKey,
             priorityFee
           );
-          console.log(result, "buy444444444444444444444444");
           if (result?.status == 200 && result?.txId) {
             bot.sendMessage(
               userId,
@@ -197,9 +195,7 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
           return;
         }
       } else {
-        console.log("222222222222222222222222222");
         await depositTraker(userId, true);
-        console.log(amount1);
         const result = await apiSwap(
           Number(parseFloat(amount1.toString()).toFixed(4)),
           quoteDecimal,
@@ -208,7 +204,6 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
           swapDetails[0].privateKey,
           priorityFee
         );
-        console.log(result, "sell:44444444444444444444444444444444");
         if (result?.status == 200 && result?.txId) {
           bot.sendMessage(
             userId,
@@ -256,7 +251,6 @@ const processSwap = async (interval: number) => {
       timeAmount = 0;
     }
     timeAmount += interval;
-    console.log(timeAmount);
     const swapInfo = await swapInfoController.swapInfo();
     if (swapInfo?.data.length > 0) {
       for (let i = 0; i < swapInfo.data.length; i++) {

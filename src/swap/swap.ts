@@ -108,9 +108,6 @@ export const apiSwap = async (
     } else {
       priorityFeeValue = data.data.default.m;
     }
-    console.log("----------------------");
-    console.log(priorityFeeValue);
-    console.log("----------------------");
     const { data: swapTransactions } = await axios.post<{
       id: string;
       version: string;
@@ -156,7 +153,6 @@ export const apiSwap = async (
     } else {
       for (const tx of allTransactions) {
         idx++;
-        console.log("444444444444444444444444444");
         const transaction = tx as VersionedTransaction;
         transaction.sign([owner]);
         try {
@@ -169,7 +165,6 @@ export const apiSwap = async (
             { blockhash, lastValidBlockHeight, signature: txId },
             "finalized"
           );
-          console.log(txId);
           if (r) {
             return { status: 200, txId: txId };
           } else {
