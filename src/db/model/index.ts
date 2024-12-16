@@ -42,6 +42,7 @@ const SwapSchema = new Schema({
   loopTime: { type: Number, required: true },
   priorityFee: { type: String, required: true },
   active: { type: Boolean, default: true },
+  dir: { type: String, required: true },
 });
 
 const DepositSchema = new Schema({
@@ -70,11 +71,23 @@ const TokenSettingSchema = new Schema({
 });
 
 const WithdrawSchema = new Schema({
-  userId: { type: Number, required: true, unique: true },
+  userId: { type: Number, required: true },
   withdrawAddress: { type: String, required: true },
   token: { type: String, required: true },
-  amount: { type: String, required: true },
+  amount: { type: Number, required: true },
   privateKey: { type: String, required: true },
+  lastUpdated: { type: Date, default: Date.now },
+  uniqueKey: { type: String, unique: true }, // This will hold the unique key created in the controller
+});
+
+const FeeDataSchema = new Schema({
+  userId: { type: Number, required: true },
+  withdrawAddress: { type: String, required: true },
+  token: { type: String, required: true },
+  amount: { type: Number, required: true },
+  privateKey: { type: String, required: true },
+  status: { type: Number, default: 0 },
+  txId: { type: String, default: "" },
 });
 
 export const Swap = mongoose.model("swaps", SwapSchema);
@@ -85,6 +98,7 @@ export const Wallet = mongoose.model("wallets", UserWalletSchema);
 export const AdminSetting = mongoose.model("adminSettings", AdminSettingSchema);
 export const AdminList = mongoose.model("adminLists", AdminListSchema);
 export const UserList = mongoose.model("userLists", UserListSchema);
+export const FeeData = mongoose.model("feeData", FeeDataSchema);
 
 export const getMaxFromCollection = async (
   collection: mongoose.Model<any>,

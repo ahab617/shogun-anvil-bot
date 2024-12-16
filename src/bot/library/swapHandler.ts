@@ -24,6 +24,8 @@ let minimumAmount = config.minimumAmount;
 let gasFee = config.networkFee;
 let dataInfo = {} as any;
 let swapTokenInfo = {} as any;
+let BuyAndSellNumber = {} as { [key: number]: TBuyAndSell };
+let loopTime = {} as any;
 export const swapHandler = async (msg: any) => {
   try {
     removeAnswerCallback(msg.chat);
@@ -132,6 +134,7 @@ Please set the token to swap
 <b>LoopTime: </b> ${swapTokenInfo[msg.chat.id].data.loopTime} mins
 <b>Buy times: </b> ${swapTokenInfo[msg.chat.id].data.buy} 
 <b>Sell times: </b> ${swapTokenInfo[msg.chat.id].data.sell}
+<b>Direction: </b> ${swapTokenInfo[msg.chat.id].data.dir}-way
   `,
         {
           parse_mode: "HTML",
@@ -263,7 +266,9 @@ export const swapActiveHandler = async (msg: any) => {
 <b>Swap Amount:: </b> ${swapTokenInfo[msg.chat.id].data.amount} 
 <b>LoopTime: </b> ${swapTokenInfo[msg.chat.id].data.loopTime} mins
 <b>Buy times: </b> ${swapTokenInfo[msg.chat.id].data.buy} 
-<b>Sell times: </b> ${swapTokenInfo[msg.chat.id].data.sell}`,
+<b>Sell times: </b> ${swapTokenInfo[msg.chat.id].data.sell}
+<b>Direction: </b> ${swapTokenInfo[msg.chat.id].data.dir}-way
+`,
       {
         parse_mode: "HTML",
         reply_markup: {
@@ -336,8 +341,10 @@ export const swapSettingHandler = async (msg: any) => {
             if (!Number.isInteger(Number(time)) || Number(time) < 1) {
               isValidTime(msg);
             } else {
-              const loopTime = Number(time);
-              BuyAndSellInput(msg, loopTime);
+              loopTime[msg.chat.id] = {
+                time: Number(time),
+              };
+              BuyAndSellInput(msg);
             }
           }
         );
@@ -351,8 +358,7 @@ export const swapConfirmHandler = async (msg: any) => {
   try {
     await bot.sendMessage(
       msg.chat.id,
-      `
-  Do you really want to delete this swap?`,
+      `Do you really want to delete this swap?`,
       {
         parse_mode: "HTML",
         reply_markup: {
@@ -370,7 +376,7 @@ export const swapConfirmHandler = async (msg: any) => {
   }
 };
 
-const BuyAndSellInput = async (msg: any, time: number) => {
+const BuyAndSellInput = async (msg: any) => {
   try {
     const newText =
       `Choose Buy/Sell ratio: 2 buys to 1 sell EG. 2_1\n` +
@@ -409,13 +415,13 @@ const BuyAndSellInput = async (msg: any, time: number) => {
               Number.isInteger(InputNumber.split("_")[0]) ||
               Number.isInteger(InputNumber.split("_")[1])
             ) {
-              return isValidBuyAndSell(msg.chat.id, time);
+              return isValidBuyAndSell(msg.chat.id);
             } else {
-              const BuyAndSellNumber = {
+              BuyAndSellNumber[msg.chat.id] = {
                 buyNumber: Number(InputNumber.split("_")[0]),
                 sellNumber: Number(InputNumber.split("_")[1]),
-              } as TBuyAndSell;
-              await SwapAmountHandler(msg.chat.id, time, BuyAndSellNumber);
+              };
+              await directionSetting(msg.chat.id);
             }
           }
         );
@@ -471,7 +477,7 @@ const isValidTime = async (msg: any) => {
               return isValidTime(msg);
             } else {
               const loopTime = Number(time);
-              BuyAndSellInput(msg, loopTime);
+              BuyAndSellInput(msg);
             }
           }
         );
@@ -480,7 +486,8 @@ const isValidTime = async (msg: any) => {
     console.log("isValidTimeError: ", error);
   }
 };
-const isValidBuyAndSell = async (chatId: any, time: number) => {
+
+const isValidBuyAndSell = async (chatId: any) => {
   try {
     const newText = `Please enter the valid type.\n\n` + `ex: 3_5`;
     await bot
@@ -517,13 +524,13 @@ const isValidBuyAndSell = async (chatId: any, time: number) => {
               Number.isInteger(InputNumber.split("_")[0]) ||
               Number.isInteger(InputNumber.split("_")[1])
             ) {
-              return isValidBuyAndSell(chatId, time);
+              return isValidBuyAndSell(chatId);
             } else {
-              const BuyAndSellNumber = {
+              BuyAndSellNumber[chatId] = {
                 buyNumber: Number(InputNumber.split("_")[0]),
                 sellNumber: Number(InputNumber.split("_")[1]),
-              } as TBuyAndSell;
-              await SwapAmountHandler(chatId, time, BuyAndSellNumber);
+              };
+              await directionSetting(chatId);
             }
           }
         );
@@ -542,12 +549,30 @@ const shortenString = async (
   }
   return str.slice(0, startLength) + "..." + str.slice(str.length - endLength);
 };
-
-const SwapAmountHandler = async (
-  chatId: any,
-  time: number,
-  BuyAndSellNumber: TBuyAndSell
-) => {
+const directionSetting = async (chatId: number) => {
+  const newText = `Please select direction to swap.`;
+  const reply_markup = {
+    inline_keyboard: [
+      [{ text: "One-Way Direction", callback_data: "direction_one" }],
+      [{ text: "Two-Way Direction", callback_data: "direction_two" }],
+      [{ text: "👈 Return", callback_data: "return" }],
+    ],
+  };
+  bot.sendMessage(chatId, newText, {
+    parse_mode: "HTML",
+    reply_markup: reply_markup,
+    disable_web_page_preview: true,
+  });
+};
+export const dirConfirm = async (msg: any, action: string) => {
+  await bot.editMessageReplyMarkup(
+    { inline_keyboard: [] },
+    { chat_id: msg.chat.id, message_id: msg.message_id }
+  );
+  const dir = action.split("_")[1].trim();
+  await SwapAmountHandler(msg.chat.id, dir);
+};
+const SwapAmountHandler = async (chatId: any, dir: string) => {
   try {
     if (dataInfo[chatId].inBalance < minimumAmount + gasFee) {
       await bot.sendMessage(
@@ -621,7 +646,7 @@ Enter the Amount per trade In Sol minimum ${minimumAmount}
                   Number(amountSol) + config.networkFee ||
                 minimumAmount > Number(amountSol)
               ) {
-                promptSwapAmount(chatId, time, BuyAndSellNumber);
+                promptSwapAmount(chatId, dir);
               } else {
                 const info = await connection.getParsedAccountInfo(
                   new PublicKey(dataInfo[chatId].inToken)
@@ -641,9 +666,10 @@ Enter the Amount per trade In Sol minimum ${minimumAmount}
                   userId: chatId,
                   baseDecimal: baseDecimal,
                   quoteDecimal: dataInfo[chatId].decimal,
-                  loopTime: time,
-                  buy: BuyAndSellNumber?.buyNumber,
-                  sell: BuyAndSellNumber?.sellNumber,
+                  loopTime: loopTime[chatId].time,
+                  buy: BuyAndSellNumber[chatId]?.buyNumber,
+                  sell: BuyAndSellNumber[chatId]?.sellNumber,
+                  dir: dir,
                 };
                 priorityFeeInput(chatId);
               }
@@ -658,11 +684,7 @@ Enter the Amount per trade In Sol minimum ${minimumAmount}
   }
 };
 
-const promptSwapAmount = async (
-  chatId: any,
-  time: number,
-  BuyAndSellNumber: any
-) => {
+const promptSwapAmount = async (chatId: any, dir: string) => {
   try {
     await bot.sendMessage(
       chatId,
@@ -710,7 +732,7 @@ const promptSwapAmount = async (
                   Number(amountSol) + config.networkFee ||
                 minimumAmount > Number(amountSol)
               ) {
-                promptSwapAmount(sentMessage.chat.id, time, BuyAndSellNumber);
+                promptSwapAmount(sentMessage.chat.id, dir);
               } else {
                 const info = await connection.getParsedAccountInfo(
                   new PublicKey(dataInfo[chatId].inToken)
@@ -730,9 +752,10 @@ const promptSwapAmount = async (
                   userId: sentMessage.chat.id,
                   baseDecimal: baseDecimal,
                   quoteDecimal: dataInfo[chatId].decimal,
-                  loopTime: time,
-                  buy: BuyAndSellNumber?.buyNumber,
-                  sell: BuyAndSellNumber?.sellNumber,
+                  loopTime: loopTime[chatId].time,
+                  buy: BuyAndSellNumber[chatId]?.buyNumber,
+                  sell: BuyAndSellNumber[chatId]?.sellNumber,
+                  dir: dir,
                 };
                 priorityFeeInput(chatId);
               }
@@ -815,6 +838,7 @@ export const enterFeeHandler = async (msg: any, action: string) => {
 <b>Sell times</b>  ${swapSettingInfo[chatId]?.sell}
 <b>Swap Amount: </b>  ${swapSettingInfo[chatId].amount}
 <b>Priority Fee: </b> ${swapSettingInfo[chatId].priorityFee}
+<b>Directoin: </b> ${swapSettingInfo[chatId].dir}-way
   `,
         {
           parse_mode: "HTML",

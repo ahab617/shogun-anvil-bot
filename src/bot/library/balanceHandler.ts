@@ -1,14 +1,13 @@
-import axios from "axios";
 import { bot } from "../index";
-import {
-  checkSolBalance,
-  checkSplTokenBalance,
-} from "../../service/getBalance";
+import { checkSolBalance, checkSplTokenBalance } from "../../service/getBalance";
 import config from "../../config.json";
 import { removeAnswerCallback } from "./index";
 import walletController from "../../controller/wallet";
 import tokenSettingController from "../../controller/tokenSetting";
+
+
 let tokenAccount = {} as any;
+
 export const balanceHandler = async (msg: any) => {
   try {
     removeAnswerCallback(msg.chat);

@@ -58,7 +58,7 @@ export class SolWalletTracker {
         return;
       }
 
-      const walletInfo: WalletInfo = {
+      let walletInfo = {
         previousBalance: initialBalance,
         Received: false,
         transferred: false,
@@ -116,11 +116,11 @@ export class SolWalletTracker {
                 } else {
                   walletInfo.previousBalance = currentBalance;
                 }
-                walletInfo.Received = false; // Mark as received
+                walletInfo.Received = false;
               }
               if (!walletInfo.transferred && transferredAmount < 0) {
                 walletInfo.previousBalance = currentBalance;
-                walletInfo.transferred = false; // Mark as received
+                walletInfo.transferred = false;
               }
             }
           }

@@ -11,6 +11,7 @@ import {
   SendTransactionError,
 } from "@solana/web3.js";
 import crypto from "crypto";
+import * as Web3 from "@solana/web3.js";
 import { bot } from "../bot";
 import config from "../config.json";
 // import * as Web3 from "@solana/web3.js";
@@ -64,7 +65,7 @@ export const withdrawService = async (withInfo: any) => {
       } else {
         bot.sendMessage(
           withInfo.userId,
-          `Withdraw failed. Please try again later`,
+          `Please try again later due to network overload`,
           {
             parse_mode: "HTML",
             reply_markup: {
@@ -86,16 +87,17 @@ const sendSol = async (
   privatekey: string
 ) => {
   try {
-    console.log(amount, toAddress, privatekey);
+    await delay(2000); // 1-second delay
     const sender = (await getKeyPairFromPrivatekey(privatekey)) as any;
     const to = new PublicKey(toAddress);
     const decimals = LAMPORTS_PER_SOL; // 1 SOL = 1e9 lamports
     const transferAmountInDecimals = Math.floor(amount * decimals);
-
+    const initialBalance = await connection.getBalance(sender.publicKey);
     // Prepare transaction
     const { lastValidBlockHeight, blockhash } =
       await connection.getLatestBlockhash({ commitment: "finalized" });
     let newNonceTx = new Transaction();
+
     newNonceTx.feePayer = sender.publicKey;
     newNonceTx.recentBlockhash = blockhash;
     newNonceTx.lastValidBlockHeight = lastValidBlockHeight;
@@ -106,7 +108,10 @@ const sendSol = async (
         lamports: transferAmountInDecimals,
       })
     );
-
+    // Simulate the transaction to estimate fees
+    const feeCalculator = await connection.getFeeForMessage(
+      newNonceTx.compileMessage()
+    );
     try {
       const tx = await sendAndConfirmTransaction(connection, newNonceTx, [
         sender,
@@ -119,7 +124,6 @@ const sendSol = async (
 
       // Retry if blockhash expired
       if (err.message.includes("Blockhash not found")) {
-        console.log("Blockhash expired, retrying...");
         const { blockhash, lastValidBlockHeight } =
           await connection.getLatestBlockhash({ commitment: "finalized" });
         newNonceTx.recentBlockhash = blockhash;
@@ -140,6 +144,44 @@ const sendSol = async (
   }
 };
 
+export const estimateSOLTransferFee = async (
+  sender: string,
+  recipient: string,
+  amount: number
+) => {
+  try {
+    const from = new PublicKey(sender);
+    const to = new PublicKey(recipient);
+    let newNonceTx = new Web3.Transaction();
+    const { blockhash, lastValidBlockHeight } =
+      await connection.getLatestBlockhash();
+    newNonceTx.feePayer = from;
+    newNonceTx.recentBlockhash = blockhash;
+    newNonceTx.lastValidBlockHeight = lastValidBlockHeight;
+    const decimals = LAMPORTS_PER_SOL; // 1 SOL = 1e9 lamports
+    const transferAmountInDecimals = Number(
+      Math.floor(amount * decimals)
+        .toString()
+        .split(".")[0]
+    );
+
+    newNonceTx.add(
+      Web3.SystemProgram.transfer({
+        fromPubkey: from,
+        toPubkey: to,
+        lamports: transferAmountInDecimals,
+      })
+    );
+    const fee = await connection.getFeeForMessage(newNonceTx.compileMessage());
+    return fee?.value || 0;
+  } catch (error) {
+    console.log("estimateSOLTransferFee: ", error);
+  }
+};
+
+const delay = (ms: number) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
 const transferSplToken = async (
   privatekey: string,
   tokenAddr: string,
@@ -180,7 +222,7 @@ const transferSplToken = async (
   }
 };
 
-const getKeyPairFromPrivatekey = async (PRIVATE_KEY: any) => {
+export const getKeyPairFromPrivatekey = async (PRIVATE_KEY: any) => {
   try {
     const keypair = Keypair.fromSecretKey(Buffer.from(PRIVATE_KEY, "base64"));
     return keypair;
@@ -269,4 +311,36 @@ export const depositTraker = async (userId: number, flag: boolean) => {
   isDepositStatus[userId] = {
     status: flag,
   };
+};
+
+export const checkTransferedTokenAmountOnSolana = async (
+  hash: string
+): Promise<any> => {
+  try {
+    const transactionResponse = await connection.getParsedTransaction(hash);
+    if (!transactionResponse) {
+      console.error("Transaction not found");
+      return null;
+    }
+
+    const tokenTransfers = [];
+    for (const instruction of transactionResponse.transaction.message
+      .instructions) {
+      const ins = instruction as any;
+      if (ins.parsed && ins.program === "spl-token") {
+        const { info, type } = ins.parsed;
+        if (type === "transfer") {
+          tokenTransfers.push({
+            from: info.source, // The source account
+            to: info.destination, // The destination account
+            amount: info.amount, // Amount transferred
+          });
+        }
+      }
+    }
+    return tokenTransfers[0];
+  } catch (err) {
+    console.log("checkTransferedTokenAmountOnSolana err", err);
+    return 0;
+  }
 };

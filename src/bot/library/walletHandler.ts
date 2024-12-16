@@ -115,7 +115,7 @@ Command line:   /deposit
         msg.chat.id,
         `
 <b>Your Anvil Wallet is connected.</b>
-${user.publicKey}
+<code>${user.publicKey}</code>
 
 You can deposit to this wallet by using this.
 Command line:   /deposit

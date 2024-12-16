@@ -5,10 +5,10 @@ import {
   checkSolBalance,
   checkSplTokenBalance,
 } from "../../service/getBalance";
-import { withdrawService } from "../../service";
+import { estimateSOLTransferFee, withdrawService } from "../../service";
 import walletController from "../../controller/wallet";
 import withdrawController from "../../controller/withdraw";
-import { removeAnswerCallback } from "./index";
+import { removeAnswerCallback, subString } from "./index";
 import tokenSetting from "../../controller/tokenSetting";
 
 interface TwithdrawInfo {
@@ -144,8 +144,8 @@ export const withdrawSelectHandler = async (msg: any, action: string | any) => {
       bot.sendMessage(
         msg.chat.id,
         `
-  Native Token Insufficient.
-  Please deposit the SOL in your wallet.`,
+Native Token Insufficient.
+Please deposit the SOL in your wallet.`,
         {
           parse_mode: "HTML",
           reply_markup: {
@@ -341,7 +341,7 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
     const balance =
       balanceAmount[msg.chat.id]?.balance?.filter(
         (item: any) => item.token === tokenAddress
-      )[0]?.balance || "0";
+      )[0]?.balance || 0;
     if (
       ![
         "/cancel",
@@ -361,19 +361,28 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
       );
     }
     if (tokenAddress === config.solTokenAddress) {
+      const fee =
+        (await estimateSOLTransferFee(
+          user.publicKey,
+          withdrawAddress[msg.chat.id].address,
+          Number(balance)
+        )) || 0;
+
+      const r = await subString(balance - (fee / 1e9 || config.withdrawFee));
       withdrawInfo[msg.chat.id] = {
         userId: msg.chat.id,
         withdrawAddress: withdrawAddress[msg.chat.id].address,
         token: tokenAddress,
-        amount: balance - config.withdrawFee,
+        amount: Number(r),
         privateKey: user.privateKey,
       } as TwithdrawInfo;
     } else {
+      const r = await subString(balance);
       withdrawInfo[msg.chat.id] = {
         userId: msg.chat.id,
         withdrawAddress: withdrawAddress[msg.chat.id].address,
         token: tokenAddress,
-        amount: balance,
+        amount: r,
         privateKey: user.privateKey,
       } as TwithdrawInfo;
     }
@@ -427,29 +436,24 @@ export const applyWithdrawHandler = async (msg: any) => {
       );
     }
     const result = await withdrawService(withdrawInfo[msg.chat.id]);
-    if (result) {
-      bot.sendMessage(
-        msg.chat.id,
-        `
-<b>Please check this.</b>
-<a href="${config.solScanUrl}/${result}"><i>View on Solscan</i></a>`,
-        {
-          parse_mode: "HTML",
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "Return  👈", callback_data: "return" }],
-            ],
-          },
-        }
-      );
-      await withdrawController.create(withdrawInfo[msg.chat.id]);
-    } else {
-      bot.sendMessage(msg.chat.id, `Withdraw failed. Please try again later`, {
-        parse_mode: "HTML",
-        reply_markup: {
-          inline_keyboard: [[{ text: "Return  👈", callback_data: "return" }]],
-        },
-      });
+    if (withdrawInfo[msg.chat.id]?.token == config.solTokenAddress) {
+      if (result) {
+        const newText = `<a href="${config.solScanUrl}/${result}"><i>View on Solscan</i></a>`;
+        bot.sendMessage(msg.chat.id, newText, { parse_mode: "HTML" });
+      } else {
+        bot.sendMessage(
+          msg.chat.id,
+          `Please try again later due to network overload`,
+          {
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "Return  👈", callback_data: "return" }],
+              ],
+            },
+          }
+        );
+      }
     }
   } catch (error) {
     console.log("applyWithdrawHandlerError: ", error);
@@ -486,12 +490,13 @@ export const someWithdrawHandler = async (msg: any, action: string) => {
         { chat_id: msg.chat.id, message_id: msg.message_id }
       );
     }
+    const r = await subString(balance);
     bot
       .sendMessage(
         msg.chat.id,
         `
 <b>Input Withdraw amount</b>
-<b>Current Balance: </b> ${balance}
+<b>Current Balance: </b> ${r}
   `,
         {
           parse_mode: "HTML",

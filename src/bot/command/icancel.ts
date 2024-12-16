@@ -1,8 +1,8 @@
 import { bot } from "../index";
 import config from "../../config.json";
-const { Commands } = require("../index.ts");
 import userList from "../../controller/userList";
 
+const { Commands } = require("../index.ts");
 const { removeAnswerCallback, sendMessage } = require("../library/index");
 
 export default new Commands(

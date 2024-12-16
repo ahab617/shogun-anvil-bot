@@ -7,6 +7,7 @@ import depositController from "../../controller/deposit";
 import adminSetting from "../../controller/adminSetting";
 import tokenController from "../../controller/tokenSetting";
 import userList from "../../controller/userList";
+import { checkTransferedTokenAmountOnSolana } from "../../service";
 
 const { Connection, PublicKey } = require("@solana/web3.js");
 const connection = new Connection(clusterApiUrl("mainnet-beta"), {
