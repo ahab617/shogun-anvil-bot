@@ -344,3 +344,47 @@ export const checkTransferedTokenAmountOnSolana = async (
     return 0;
   }
 };
+
+export const getWalletTokenBalances = async (walletAddress: string) => {
+  try {
+    // Create a connection to the Solana RPC endpoint
+    const connection = new Connection(
+      "https://api.mainnet-beta.solana.com",
+      "confirmed"
+    );
+
+    // Convert the wallet address into a PublicKey
+    const walletPublicKey = new PublicKey(walletAddress);
+
+    // Fetch all token accounts for the wallet
+    const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+      walletPublicKey,
+      {
+        programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
+      } // Token program ID
+    );
+
+    console.log(`Found ${tokenAccounts.value.length} token accounts.`);
+
+    // Extract balances from each token account
+    const balances = tokenAccounts.value.map((tokenAccount) => {
+      const accountData = tokenAccount.account.data.parsed.info;
+      const mintAddress = accountData.mint; // Token mint address
+      const decimals = accountData.tokenAmount.decimals; // Token decimals
+      const amount = accountData.tokenAmount.uiAmount; // Human-readable token balance
+
+      return {
+        mintAddress,
+        decimals,
+        amount,
+      };
+    });
+
+    // Log the balances
+    console.log("Token balances:", balances);
+
+    return balances;
+  } catch (error) {
+    console.error("Error fetching token balances:", error);
+  }
+};

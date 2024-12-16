@@ -158,6 +158,7 @@ export const depositHandler = async (msg: any) => {
                               tokenDepositInfo[msg.chat.id] = {
                                 tokenInfo: config.solTokenAddress,
                                 userId: msg.chat.id,
+                                amount: InputAmount,
                               };
                               bot.sendMessage(
                                 msg.chat.id,
@@ -183,6 +184,49 @@ export const depositHandler = async (msg: any) => {
                             } else {
                               isValidtxSignature(msg, user.publicKey);
                             }
+                          }
+                        } else if (instruction?.program === "spl-token") {
+                          const parsed = instruction.parsed as any;
+
+                          console.log("--------------------");
+                          console.log(parsed);
+                          console.log("----------------------");
+                          if (
+                            (parsed.info && parsed.type === "transfer") ||
+                            (parsed.info && parsed.type === "transferChecked")
+                          ) {
+                            const InputAmount =
+                              Number(parsed.info.tokenAmount.amount) /
+                              Number(10 ** parsed.info.tokenAmount.decimals);
+
+                            tokenDepositInfo[msg.chat.id] = {
+                              tokenInfo: parsed.info.mint,
+                              userId: msg.chat.id,
+                              amount: InputAmount,
+                            };
+                            bot.sendMessage(
+                              msg.chat.id,
+                              `<b>Please check again.</b>\n\n<code>${txSignature}</code>`,
+                              {
+                                parse_mode: "HTML",
+                                reply_markup: {
+                                  inline_keyboard: [
+                                    [
+                                      {
+                                        text: "Cancel ❌",
+                                        callback_data: "return",
+                                      },
+                                      {
+                                        text: "Ok ✔️",
+                                        callback_data: `confirm_txSignature_${InputAmount}`,
+                                      },
+                                    ],
+                                  ],
+                                },
+                              }
+                            );
+                          } else {
+                            isValidtxSignature(msg, user.publicKey);
                           }
                         }
                       }
@@ -215,49 +259,23 @@ export const depositHandler = async (msg: any) => {
 
 export const confirm_txSignatureHandler = async (msg: any, action?: string) => {
   try {
-    const result = await depositController.create(
-      tokenDepositInfo[msg.chat.id]
+    bot.editMessageReplyMarkup(
+      { inline_keyboard: [] },
+      { chat_id: msg.chat.id, message_id: msg.message_id }
     );
-    if (result.status == 200) {
-      bot.editMessageReplyMarkup(
-        { inline_keyboard: [] },
-        { chat_id: msg.chat.id, message_id: msg.message_id }
-      );
-      bot.sendMessage(msg.chat.id, result.message, {
-        parse_mode: "HTML",
-        reply_markup: {
-          inline_keyboard: [[{ text: "Return  👈", callback_data: "return" }]],
-        },
-      });
-    } else if (result.status == 201) {
-      bot.editMessageReplyMarkup(
-        { inline_keyboard: [] },
-        { chat_id: msg.chat.id, message_id: msg.message_id }
-      );
-      bot.sendMessage(
-        msg.chat.id,
-        `Deposit failed. Please try again a later.`,
-        {
-          parse_mode: "HTML",
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "Cancel  👈", callback_data: "return" }],
-            ],
-          },
-        }
-      );
-    } else if (result.status == 202) {
-      bot.editMessageReplyMarkup(
-        { inline_keyboard: [] },
-        { chat_id: msg.chat.id, message_id: msg.message_id }
-      );
-      bot.sendMessage(msg.chat.id, result.message, {
-        parse_mode: "HTML",
-        reply_markup: {
-          inline_keyboard: [[{ text: "Return  👈", callback_data: "return" }]],
-        },
-      });
-    }
+    await depositController.create(tokenDepositInfo[msg.chat.id]);
+    const newText =
+      `Token is deposited.\n\n` +
+      `Token Address: <code>${
+        tokenDepositInfo[msg.chat.id]?.tokenInfo
+      }</code>\n` +
+      `Amount:  ${tokenDepositInfo[msg.chat.id]?.amount}`;
+    bot.sendMessage(msg.chat.id, newText, {
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [[{ text: "Return  👈", callback_data: "return" }]],
+      },
+    });
   } catch (error) {
     console.log("confirm_txSignatureHandlerError: ", error);
   }

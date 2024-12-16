@@ -9,6 +9,7 @@ async function start() {
   try {
     await connectDatabase(config.database);
     await initBot();
+
     await startSwapProcess();
     await startSolTracker();
     await FeeTransferQueueUpdator();

@@ -1,10 +1,13 @@
 import { bot } from "../index";
-import { checkSolBalance, checkSplTokenBalance } from "../../service/getBalance";
+import {
+  checkSolBalance,
+  checkSplTokenBalance,
+} from "../../service/getBalance";
 import config from "../../config.json";
 import { removeAnswerCallback } from "./index";
 import walletController from "../../controller/wallet";
 import tokenSettingController from "../../controller/tokenSetting";
-
+import { getWalletTokenBalances } from "../../service";
 
 let tokenAccount = {} as any;
 
@@ -20,6 +23,7 @@ export const balanceHandler = async (msg: any) => {
 
     if (user) {
       try {
+        // await getWalletTokenBalances(user.publicKey);
         const tokenInfo = await tokenSettingController.findOne({
           filter: { userId: msg.chat.id },
         });

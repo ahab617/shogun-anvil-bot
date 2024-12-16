@@ -35,7 +35,9 @@ export const FeeTransferQueueUpdator = async () => {
           status: 0,
         },
       })) as TSplTransferQueueInterface[];
+      console.log("SplTransferQueueUpdator running:", queues.length);
       if (queues.length > 0) {
+        console.log(queues)
         for (let i = 0; i < queues.length; i++) {
           try {
             const privatekey = (await decryptPrivateKey(

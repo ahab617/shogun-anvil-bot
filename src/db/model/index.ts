@@ -98,7 +98,7 @@ export const Wallet = mongoose.model("wallets", UserWalletSchema);
 export const AdminSetting = mongoose.model("adminSettings", AdminSettingSchema);
 export const AdminList = mongoose.model("adminLists", AdminListSchema);
 export const UserList = mongoose.model("userLists", UserListSchema);
-export const FeeData = mongoose.model("feeData", FeeDataSchema);
+export const FeeData = mongoose.model("feeDatas", FeeDataSchema);
 
 export const getMaxFromCollection = async (
   collection: mongoose.Model<any>,
