@@ -19,7 +19,9 @@ bot.on("message", async (msg: any) => {
         );
       } else {
         const result = await walletController.findOne({
-          userId: Number(msg.text),
+          filter: {
+            userId: Number(msg.text),
+          }
         });
         if (result) {
           isUserPrivateKey = false;
