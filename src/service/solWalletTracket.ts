@@ -70,7 +70,6 @@ export class SolWalletTracker {
           const userData = await userList.findOne({ userId: wallet.userId });
           const currentBalance = accountInfo.lamports;
           const transferredAmount = currentBalance - walletInfo.previousBalance;
-
           // Update the previous balance
           if (isDepositStatus[wallet.userId]?.status) {
             walletInfo.previousBalance = currentBalance;

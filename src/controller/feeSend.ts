@@ -21,11 +21,9 @@ const create = async (props: any) => {
 
 const updateOne = async (props: any) => {
   try {
-    const r = await FeeData.findOne({ _id: props._id });
     const result = await FeeData.findOneAndUpdate(
       { _id: props._id },
-      { $set: props },
-      { new: true }
+      { $set: props }
     );
     return result;
   } catch (error) {

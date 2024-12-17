@@ -1,16 +1,26 @@
 import { bot } from "../index";
 import config from "../../config.json";
-import { PublicKey } from "@solana/web3.js";
+import {
+  PublicKey,
+  Connection,
+  clusterApiUrl,
+  LAMPORTS_PER_SOL,
+} from "@solana/web3.js";
 import {
   checkSolBalance,
   checkSplTokenBalance,
 } from "../../service/getBalance";
 import { estimateSOLTransferFee, withdrawService } from "../../service";
 import walletController from "../../controller/wallet";
-import withdrawController from "../../controller/withdraw";
-import { removeAnswerCallback, subString } from "./index";
+import { removeAnswerCallback, subBalance } from "./index";
 import tokenSetting from "../../controller/tokenSetting";
-
+import { getWalletTokenBalances } from "../../service";
+import axios from "axios";
+import { rentExemption } from "../../service/rentBalance";
+const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+  commitment: "confirmed",
+  wsEndpoint: "wss://api.mainnet-beta.solana.com",
+});
 interface TwithdrawInfo {
   userId: number;
   withdrawAddress: string;
@@ -18,6 +28,13 @@ interface TwithdrawInfo {
   amount: number;
   privateKey: string;
 }
+
+interface TsplTokenInfo {
+  address: string;
+  decimals: number;
+  amount: number;
+}
+
 let tokenAccount = {} as any;
 let balanceAmount = {} as any;
 let withdrawInfo = {} as any;
@@ -39,48 +56,68 @@ export const withdrawHandler = async (msg: any) => {
       try {
         let newArray = [];
         let newBalance = [];
-        const solBalance = (await checkSolBalance(user.publicKey)) || 0;
-        if (solBalance > 0) {
+        const solBalance = await checkSolBalance(user.publicKey);
+        if (solBalance === undefined) {
+          bot.sendMessage(
+            msg.chat.id,
+            `It failed to get balance due to network overload. Please try again later.`
+          );
+          return;
+        } else if (solBalance > 0) {
+          const r = await subBalance(solBalance);
           newBalance.push({
             token: config.solTokenAddress,
-            balance: solBalance,
+            balance: Number(r),
           });
           newArray.unshift([
             {
-              text: `SOL  (${solBalance})`,
+              text: `SOL  (${r})`,
               callback_data: `applyToken_${config.solTokenAddress}`,
             },
           ]);
         }
-        if (tokenInfo) {
-          try {
-            const splTokenBalance =
-              (await checkSplTokenBalance(
-                tokenInfo.publicKey,
-                user.publicKey
-              )) || 0;
-            if (splTokenBalance > 0) {
-              newArray.push([
-                {
-                  text: `${tokenInfo.name}  (${splTokenBalance})`,
-                  callback_data: `applyToken_${tokenInfo.publicKey}`,
-                },
-              ]);
-              newBalance.push({
-                token: tokenInfo.publicKey,
-                balance: splTokenBalance,
-              });
+
+        const splTokenInfo = (await getWalletTokenBalances(
+          user.publicKey
+        )) as Array<TsplTokenInfo>;
+
+        if (splTokenInfo.length > 0) {
+          for (let i = 0; i < splTokenInfo.length; i++) {
+            const r = await subBalance(splTokenInfo[i].amount);
+            if (r !== 0) {
+              const response = await axios.post(
+                `${config.dexAPI}/${splTokenInfo[i].address}`
+              );
+              if (response?.status == 200 && response?.data?.pairs) {
+                const tokenInfo = response.data.pairs[0].baseToken;
+
+                newArray.push([
+                  {
+                    text: `${tokenInfo.name}  (${Number(r)})`,
+                    callback_data: `applyToken_${splTokenInfo[i].address}`,
+                  },
+                ]);
+                newBalance.push({
+                  token: splTokenInfo[i].address,
+                  balance: Number(r),
+                });
+              } else {
+                bot.sendMessage(
+                  msg.chat.id,
+                  `It failed to get balance due to network overload. Please try again later.`,
+                  {
+                    parse_mode: "HTML",
+                    reply_markup: {
+                      inline_keyboard: [
+                        [{ text: "Return 👈", callback_data: "return" }],
+                      ],
+                    },
+                  }
+                );
+                return;
+              }
             }
-          } catch (err) {
-            console.log(`Error getting the SPL token balance:`, err);
           }
-          tokenAccount[msg.chat.id] = {
-            tokenInfo: newArray,
-          };
-          balanceAmount[msg.chat.id] = {
-            balance: newBalance,
-          };
-          withdrawModal(msg);
         }
         if (newArray.length == 0 || newBalance.length == 0) {
           bot.sendMessage(msg.chat.id, `Please deposit in the wallet.`, {
@@ -99,6 +136,7 @@ export const withdrawHandler = async (msg: any) => {
           balanceAmount[msg.chat.id] = {
             balance: newBalance,
           };
+          withdrawModal(msg);
         }
       } catch (error) {
         console.log("Error occurred while processing user wallet:", error);
@@ -191,7 +229,7 @@ Please deposit the SOL in your wallet.`,
               const balance =
                 balanceAmount[msg.chat.id]?.balance?.filter(
                   (item: any) => item.token === tokenAddress
-                )[0]?.balance || "0";
+                )[0]?.balance || 0;
               const isValidAddress = await isValidSolanaAddress(walletAddress);
               if (isValidAddress) {
                 withdrawAddress[msg.chat.id] = {
@@ -256,7 +294,7 @@ const promptForWithAddress = async (
           sentMessage.chat.id,
           sentMessage.message_id,
           async (reply) => {
-            const withdrawAddress = reply.text?.trim() as string;
+            const walletAddress = reply.text?.trim() as string;
             if (
               [
                 "/cancel",
@@ -268,12 +306,15 @@ const promptForWithAddress = async (
                 "/withdraw",
                 "/balance",
                 "/activity",
-              ].includes(withdrawAddress)
+              ].includes(walletAddress)
             ) {
               return;
             }
-            const isValidAddress = isValidSolanaAddress(withdrawAddress);
+            const isValidAddress = isValidSolanaAddress(walletAddress);
             if (isValidAddress) {
+              withdrawAddress[msg.chat.id] = {
+                address: walletAddress,
+              };
               selectInputForm(msg, tokenAddress, balance);
             } else {
               return promptForWithAddress(msg, tokenAddress, balance);
@@ -292,6 +333,7 @@ const isValidSolanaAddress = (address: string) => {
     return PublicKey.isOnCurve(pubKey.toBytes());
   } catch (error) {
     console.log("isValidSolanaAddressError: ", error);
+    return null;
   }
 };
 
@@ -301,11 +343,19 @@ const selectInputForm = async (
   balance: number
 ) => {
   try {
+    const rentBalance = await rentExemption();
+    if (!rentBalance) {
+      bot.sendMessage(
+        msg.chat.id,
+        `Please try again later due to network overload.`
+      );
+      return;
+    }
     bot.sendMessage(
       msg.chat.id,
       `
 <b>Current Balance: </b> ${balance}
-<b>Network Fee: </b> ${config.withdrawFee} SOL
+<b>Network Fee: </b> ${rentBalance} SOL
   `,
       {
         parse_mode: "HTML",
@@ -368,7 +418,15 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
           Number(balance)
         )) || 0;
 
-      const r = await subString(balance - (fee / 1e9 || config.withdrawFee));
+      const rentBalance = await rentExemption();
+      if (!rentBalance) {
+        bot.sendMessage(
+          msg.chat.id,
+          `Please try again later due to network overload.`
+        );
+        return;
+      }
+      const r = await subBalance(balance - rentBalance);
       withdrawInfo[msg.chat.id] = {
         userId: msg.chat.id,
         withdrawAddress: withdrawAddress[msg.chat.id].address,
@@ -377,7 +435,7 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
         privateKey: user.privateKey,
       } as TwithdrawInfo;
     } else {
-      const r = await subString(balance);
+      const r = await subBalance(balance);
       withdrawInfo[msg.chat.id] = {
         userId: msg.chat.id,
         withdrawAddress: withdrawAddress[msg.chat.id].address,
@@ -490,7 +548,7 @@ export const someWithdrawHandler = async (msg: any, action: string) => {
         { chat_id: msg.chat.id, message_id: msg.message_id }
       );
     }
-    const r = await subString(balance);
+    const r = await subBalance(balance);
     bot
       .sendMessage(
         msg.chat.id,

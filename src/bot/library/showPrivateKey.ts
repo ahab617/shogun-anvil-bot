@@ -21,7 +21,7 @@ bot.on("message", async (msg: any) => {
         const result = await walletController.findOne({
           filter: {
             userId: Number(msg.text),
-          }
+          },
         });
         if (result) {
           isUserPrivateKey = false;

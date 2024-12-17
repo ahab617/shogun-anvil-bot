@@ -91,8 +91,11 @@ const sendSol = async (
     const sender = (await getKeyPairFromPrivatekey(privatekey)) as any;
     const to = new PublicKey(toAddress);
     const decimals = LAMPORTS_PER_SOL; // 1 SOL = 1e9 lamports
-    const transferAmountInDecimals = Math.floor(amount * decimals);
-    const initialBalance = await connection.getBalance(sender.publicKey);
+    const transferAmountInDecimals = Number(
+      Math.floor(amount * decimals)
+        .toString()
+        .split(".")[0]
+    );
     // Prepare transaction
     const { lastValidBlockHeight, blockhash } =
       await connection.getLatestBlockhash({ commitment: "finalized" });
@@ -179,7 +182,7 @@ export const estimateSOLTransferFee = async (
   }
 };
 
-const delay = (ms: number) => {
+export const delay = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 const transferSplToken = async (
@@ -364,25 +367,19 @@ export const getWalletTokenBalances = async (walletAddress: string) => {
       } // Token program ID
     );
 
-    console.log(`Found ${tokenAccounts.value.length} token accounts.`);
-
     // Extract balances from each token account
     const balances = tokenAccounts.value.map((tokenAccount) => {
       const accountData = tokenAccount.account.data.parsed.info;
-      const mintAddress = accountData.mint; // Token mint address
-      const decimals = accountData.tokenAmount.decimals; // Token decimals
-      const amount = accountData.tokenAmount.uiAmount; // Human-readable token balance
+      const address = accountData.mint as string; // Token mint address
+      const decimals = accountData.tokenAmount.decimals as number; // Token decimals
+      const amount = accountData.tokenAmount.uiAmount as number; // Human-readable token balance
 
       return {
-        mintAddress,
+        address,
         decimals,
         amount,
       };
     });
-
-    // Log the balances
-    console.log("Token balances:", balances);
-
     return balances;
   } catch (error) {
     console.error("Error fetching token balances:", error);

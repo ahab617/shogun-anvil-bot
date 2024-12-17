@@ -1,3 +1,4 @@
+import { rainbow } from "colors";
 import { bot } from "../index";
 import { answerCallbacks } from "../index";
 import { Message } from "node-telegram-bot-api";
@@ -47,7 +48,8 @@ export const deleteMessage1 = async (message: Message, message_id: number) => {
   }
 };
 
-export const subString = async (text: number) => {
-  const r = Number(Math.floor(text * 1e6) / 1e6);
+export const subBalance = async (text: number) => {
+  const r = Number(Math.floor(text * 1e4) / 1e4);
+  console.log(rainbow);
   return r;
 };

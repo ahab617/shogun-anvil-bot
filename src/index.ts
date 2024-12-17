@@ -9,10 +9,9 @@ async function start() {
   try {
     await connectDatabase(config.database);
     await initBot();
-
-    await startSwapProcess();
     await startSolTracker();
     await FeeTransferQueueUpdator();
+    await startSwapProcess();
   } catch (error) {
     console.log("Bot Start Error: ", error);
   }

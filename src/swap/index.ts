@@ -6,7 +6,6 @@ import depositController from "../controller/deposit";
 import { convertTokenAmount } from "../service/getTokenPrice";
 import { checkSolBalance, checkSplTokenBalance } from "../service/getBalance";
 import { depositTraker } from "../service";
-import { subString } from "../bot/library";
 
 const cron = require("node-cron");
 let timeAmount = 0;
@@ -203,9 +202,8 @@ const executeSwap = async (userList: any) => {
           }
         } else {
           await depositTraker(userId, true);
-          const r = await subString(amount1);
           const result = await apiSwap(
-            r,
+            Number(parseFloat(amount1.toString()).toFixed(4)),
             quoteDecimal,
             quoteToken,
             baseToken,
@@ -217,7 +215,9 @@ const executeSwap = async (userList: any) => {
               userId,
               `
   You sold the token.
-  Reverse swap for ${Number(r)} ${quoteSymbol} -> ${baseSymbol}
+  Reverse swap for ${Number(
+    parseFloat(amount1.toString()).toFixed(4)
+  )} ${quoteSymbol} -> ${baseSymbol}
   <a href="${config.solScanUrl}/${result.txId}">View on Solscan</a>`,
               { parse_mode: "HTML" }
             );
@@ -268,8 +268,13 @@ const executeSwap = async (userList: any) => {
           if (amount1 === undefined) return;
           if (currentTokenBalance < amount1 * buy) {
             if (isBalance) {
-              const value = await subString(
-                (amount + config.networkFee) * buy - currentSolBalance
+              const value = Number(
+                parseFloat(
+                  (
+                    (amount + config.networkFee) * buy -
+                    currentSolBalance
+                  ).toString()
+                ).toFixed(4)
               );
               await inputTokenCheck(userId, baseToken, baseSymbol, value);
               const swapInfoUpdate = {
@@ -319,8 +324,13 @@ const executeSwap = async (userList: any) => {
           if (currentSolBalance === undefined) return;
           if (currentSolBalance < (amount + config.networkFee) * sell) {
             if (isBalance) {
-              const value = await subString(
-                (amount + config.networkFee) * buy - currentSolBalance
+              const value = Number(
+                parseFloat(
+                  (
+                    (amount + config.networkFee) * buy -
+                    currentSolBalance
+                  ).toString()
+                ).toFixed(4)
               );
               await inputTokenCheck(userId, baseToken, baseSymbol, value);
               const swapInfoUpdate = {
@@ -413,9 +423,9 @@ const executeSwap = async (userList: any) => {
 
         if (amount1 === undefined) return;
         await depositTraker(userId, true);
-        const r = await subString(amount1);
+        Number(parseFloat(amount1.toString()).toFixed(4));
         const result = await apiSwap(
-          r,
+          Number(parseFloat(amount1.toString()).toFixed(4)),
           quoteDecimal,
           quoteToken,
           baseToken,
@@ -427,7 +437,9 @@ const executeSwap = async (userList: any) => {
             userId,
             `
   You sold the token.
-  Reverse swap for ${r} ${quoteSymbol} -> ${baseSymbol}
+  Reverse swap for ${Number(
+    parseFloat(amount1.toString()).toFixed(4)
+  )} ${quoteSymbol} -> ${baseSymbol}
   <a href="${config.solScanUrl}/${result.txId}">View on Solscan</a>`,
             { parse_mode: "HTML" }
           );
