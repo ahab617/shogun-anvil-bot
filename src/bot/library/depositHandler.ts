@@ -187,10 +187,6 @@ export const depositHandler = async (msg: any) => {
                           }
                         } else if (instruction?.program === "spl-token") {
                           const parsed = instruction.parsed as any;
-
-                          console.log("--------------------");
-                          console.log(parsed);
-                          console.log("----------------------");
                           if (
                             (parsed.info && parsed.type === "transfer") ||
                             (parsed.info && parsed.type === "transferChecked")

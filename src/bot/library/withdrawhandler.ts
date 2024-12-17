@@ -16,7 +16,6 @@ import { removeAnswerCallback, subBalance } from "./index";
 import tokenSetting from "../../controller/tokenSetting";
 import { getWalletTokenBalances } from "../../service";
 import axios from "axios";
-import { rentExemption } from "../../service/rentBalance";
 const connection = new Connection(clusterApiUrl("mainnet-beta"), {
   commitment: "confirmed",
   wsEndpoint: "wss://api.mainnet-beta.solana.com",
@@ -343,19 +342,11 @@ const selectInputForm = async (
   balance: number
 ) => {
   try {
-    const rentBalance = await rentExemption();
-    if (!rentBalance) {
-      bot.sendMessage(
-        msg.chat.id,
-        `Please try again later due to network overload.`
-      );
-      return;
-    }
     bot.sendMessage(
       msg.chat.id,
       `
 <b>Current Balance: </b> ${balance}
-<b>Network Fee: </b> ${rentBalance} SOL
+<b>Network Fee: </b> ${config.withdrawFee} SOL
   `,
       {
         parse_mode: "HTML",
@@ -417,16 +408,9 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
           withdrawAddress[msg.chat.id].address,
           Number(balance)
         )) || 0;
-
-      const rentBalance = await rentExemption();
-      if (!rentBalance) {
-        bot.sendMessage(
-          msg.chat.id,
-          `Please try again later due to network overload.`
-        );
-        return;
-      }
-      const r = await subBalance(balance - rentBalance);
+      const r = await subBalance(
+        (balance * 1e9 - (fee || config.withdrawFee * 1e9)) / 1e9
+      );
       withdrawInfo[msg.chat.id] = {
         userId: msg.chat.id,
         withdrawAddress: withdrawAddress[msg.chat.id].address,

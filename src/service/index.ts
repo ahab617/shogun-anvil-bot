@@ -14,8 +14,6 @@ import crypto from "crypto";
 import * as Web3 from "@solana/web3.js";
 import { bot } from "../bot";
 import config from "../config.json";
-// import * as Web3 from "@solana/web3.js";
-// import { web3 } from "@project-serum/anchor";
 import withdrawController from "../controller/withdraw";
 import { getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
 

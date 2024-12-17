@@ -5,7 +5,7 @@ import swapInfoController from "../controller/swap";
 import depositController from "../controller/deposit";
 import { convertTokenAmount } from "../service/getTokenPrice";
 import { checkSolBalance, checkSplTokenBalance } from "../service/getBalance";
-import { depositTraker } from "../service";
+import { delay, depositTraker } from "../service";
 
 const cron = require("node-cron");
 let timeAmount = 0;
@@ -88,8 +88,10 @@ const executeSwap = async (userList: any) => {
                 };
               }
               await swapInfoController.updateOne(swapInfoUpdate);
+              delay(10000);
               await depositTraker(userId, false);
             } else {
+              delay(10000);
               await depositTraker(userId, false);
               return;
             }
@@ -239,8 +241,10 @@ const executeSwap = async (userList: any) => {
               };
             }
             await swapInfoController.updateOne(swapInfoUpdate);
+            delay(10000);
             await depositTraker(userId, false);
           } else {
+            delay(10000);
             await depositTraker(userId, false);
             return;
           }
@@ -315,7 +319,6 @@ const executeSwap = async (userList: any) => {
           baseToken,
           quoteToken
         )) as any;
-
         if (amount1 === undefined) return;
         if (currentTokenBalance < amount1 * sell) {
           const currentSolBalance = (await checkSolBalance(
@@ -356,10 +359,31 @@ const executeSwap = async (userList: any) => {
             return;
           }
         } else {
-          isSplTokenStatusFunc(userId, true);
+          const currentSolBalance = (await checkSolBalance(
+            swapDetails[0].publicKey
+          )) as any;
+          if (currentSolBalance == undefined) return;
+          if (currentSolBalance < config.networkFee) {
+            if (isBalance) {
+              const value = Number(
+                parseFloat(
+                  (config.networkFee - currentSolBalance).toString()
+                ).toFixed(4)
+              );
+              await inputTokenCheck(userId, baseToken, baseSymbol, value);
+              const swapInfoUpdate = {
+                userId: userId,
+                isBalance: false,
+              };
+              await swapInfoController.updateOne(swapInfoUpdate);
+            } else {
+              return;
+            }
+          } else {
+            isSplTokenStatusFunc(userId, true);
+          }
         }
       }
-
       if (isSolStatus[userId]?.isSol && buyProgress < buy && flag) {
         await depositTraker(userId, true);
         const result = await apiSwap(
@@ -405,8 +429,10 @@ const executeSwap = async (userList: any) => {
             };
           }
           await swapInfoController.updateOne(swapInfoUpdate);
+          delay(10000);
           await depositTraker(userId, false);
         } else {
+          delay(10000);
           await depositTraker(userId, false);
           return;
         }
@@ -420,10 +446,8 @@ const executeSwap = async (userList: any) => {
           baseToken,
           quoteToken
         )) as any;
-
         if (amount1 === undefined) return;
         await depositTraker(userId, true);
-        Number(parseFloat(amount1.toString()).toFixed(4));
         const result = await apiSwap(
           Number(parseFloat(amount1.toString()).toFixed(4)),
           quoteDecimal,

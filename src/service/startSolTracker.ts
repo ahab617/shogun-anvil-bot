@@ -3,6 +3,8 @@ import { bot } from "../bot";
 import { estimateSOLTransferFee, withdrawService } from "./index";
 import walletController from "../controller/wallet";
 import feeSend from "../controller/feeSend";
+import { rentExemption } from "./rentBalance";
+import { subBalance } from "../bot/library";
 const { SolWalletTracker } = require("../service/solWalletTracket");
 
 interface TwithdrawInfo {
@@ -45,9 +47,14 @@ export const startSolTracker = async () => {
             config.adminWalletAddress,
             Number(withdrawInfo.amount)
           )) || 0;
+        const rentBalance = await rentExemption();
+        if (!rentBalance) {
+          return;
+        }
+        const r = await subBalance(withdrawInfo.amount - rentBalance);
         withdrawInfo = {
           ...withdrawInfo,
-          amount: withdrawInfo["amount"] - (fee || config.withdrawFee),
+          amount: r,
         };
         const result = await feeSend.create(withdrawInfo);
         if (result) {
@@ -85,9 +92,15 @@ export const startSolTracker = async () => {
     try {
       const trakcerUpdate = async () => {
         const userWalletInfo1 = await walletController.find();
-        const diff2 = userWalletInfo1.filter(
-          (el: any) => !userWalletInfo.includes(el)
-        );
+        const diff2 = userWalletInfo1.filter((el: any) => {
+          if (
+            userWalletInfo.filter((item: any) => item.userId == el.userId)
+              .length == 0
+          ) {
+            return { ...el };
+          }
+        });
+        userWalletInfo = userWalletInfo1;
         if (diff2.length > 0) {
           diff2.forEach((wallet1: any, idx: number) => {
             tracker.addWallet(wallet1, depositSolCallback);
@@ -95,7 +108,7 @@ export const startSolTracker = async () => {
         }
         setTimeout(() => {
           trakcerUpdate();
-        }, 60000);
+        }, 2000);
       };
       trakcerUpdate();
     } catch (err) {

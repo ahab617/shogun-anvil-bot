@@ -3,6 +3,7 @@ import {
   PublicKey,
   clusterApiUrl,
   AccountInfo,
+  LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import adminSetting from "../controller/adminSetting";
 import adminListController from "../controller/adminList";
@@ -86,17 +87,16 @@ export class SolWalletTracker {
             } else {
               const result = await adminSetting.find();
               const depositData = result?.result as Array<TdepositData>;
-
               if (!walletInfo.Received && transferredAmount > 0) {
-                let amount = transferredAmount / 1e9;
+                let amount = transferredAmount / LAMPORTS_PER_SOL;
                 let flag = false;
                 if (
                   Number(depositData[0].miniAmount) >
-                  transferredAmount / 1e9
+                  Number(transferredAmount / LAMPORTS_PER_SOL)
                 ) {
                   flag = true;
                 }
-                const r = callback?.(
+                const r = await callback?.(
                   wallet,
                   flag,
                   userData?.fee,
@@ -106,7 +106,7 @@ export class SolWalletTracker {
                 if (r) {
                   if (
                     Number(depositData[0].miniAmount) <=
-                    transferredAmount / 1e9
+                    Number(transferredAmount / LAMPORTS_PER_SOL)
                   ) {
                     walletInfo.previousBalance =
                       currentBalance -
@@ -136,21 +136,21 @@ export class SolWalletTracker {
   }
 
   async removeWallet(
-    userId: number,
     walletAddress: string,
     subscriptionId?: number
   ): Promise<void> {
     if (!this.walletAddresses.has(walletAddress)) {
+      console.log(`Wallet ${walletAddress} is not being monitored.`);
       return;
     }
 
     if (subscriptionId) {
-      await this.connection.removeAccountChangeListener(subscriptionId);
+      this.connection.removeAccountChangeListener(subscriptionId);
     }
 
     this.walletAddresses.delete(walletAddress);
+    console.log(`Removed ${walletAddress} from monitoring list.`);
   }
-
   getTrackedWallets(): string[] {
     return Array.from(this.walletAddresses.keys());
   }
