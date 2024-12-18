@@ -9,7 +9,7 @@ import userList from "../controller/userList";
 const { SolWalletTracker } = require("../service/solWalletTracket");
 
 const connection = new Connection(config.rpcUrl);
-
+let retryCount = { count: 0 } as any;
 interface TwithdrawInfo {
   userId: number;
   withdrawAddress: string;
@@ -41,8 +41,8 @@ export const startSolTracker = async () => {
           maxSupportedTransactionVersion: 0,
         }
       );
-      console.log(parsedTx);
       if (!parsedTx || !parsedTx?.meta || !parsedTx?.meta.logMessages) {
+        await retryTransactionTracker(wallet, transactionSignature);
         console.log("Invalid or unsupported transaction format");
         return;
       }
@@ -146,4 +146,25 @@ const feeProcessFunc = async (wallet: any, transactionDetails: any) => {
   } catch (error) {
     console.log("feeProcessFunc: ", error);
   }
+};
+
+const retryTransactionTracker = async (
+  wallet: any,
+  transactionSignature: string
+) => {
+  retryCount[wallet.userId] = {
+    count: retryCount[wallet.userId].count + 1,
+  };
+  const parsedTx = await connection.getParsedTransaction(transactionSignature, {
+    commitment: "confirmed",
+    maxSupportedTransactionVersion: 0,
+  });
+  if (!parsedTx || !parsedTx?.meta || !parsedTx?.meta.logMessages) {
+    if (retryCount[wallet.userId].count === 5) {
+      console.log("Invalid or unsupported transaction format");
+      return;
+    }
+    await retryTransactionTracker(wallet, transactionSignature);
+  }
+  await feeProcessFunc(wallet, parsedTx);
 };

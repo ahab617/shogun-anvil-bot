@@ -26,9 +26,6 @@ export class SolWalletTracker {
       const subscriptionId = this.connection.onLogs(
         publicKey,
         async (logs) => {
-          console.log(`Transaction detected for wallet ${wallet.publicKey}:`);
-          console.log("Logs:", logs);
-
           if (callback) {
             await callback(wallet, logs.signature, logs.logs);
           }
@@ -37,7 +34,6 @@ export class SolWalletTracker {
       );
 
       this.walletAddresses.set(wallet.publicKey, { subscriptionId });
-      console.log(`Started monitoring transactions for ${wallet.publicKey}`);
     } catch (error) {
       console.error(`Error adding wallet ${wallet.publicKey}:`, error);
     }
@@ -45,7 +41,6 @@ export class SolWalletTracker {
 
   async removeWallet(walletAddress: string): Promise<void> {
     if (!this.walletAddresses.has(walletAddress)) {
-      console.log(`Wallet ${walletAddress} is not being monitored.`);
       return;
     }
 
@@ -54,8 +49,6 @@ export class SolWalletTracker {
     // Remove subscription
     this.connection.removeOnLogsListener(subscriptionId);
     this.walletAddresses.delete(walletAddress);
-
-    console.log(`Stopped monitoring transactions for ${walletAddress}`);
   }
 
   getTrackedWallets(): string[] {

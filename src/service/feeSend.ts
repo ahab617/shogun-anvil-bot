@@ -1,9 +1,22 @@
 import feeSend from "../controller/feeSend";
+import {
+  Connection,
+  PublicKey,
+  clusterApiUrl,
+  LAMPORTS_PER_SOL,
+  Transaction,
+  sendAndConfirmTransaction,
+  SystemProgram,
+} from "@solana/web3.js";
 import { bot } from "../bot";
 import config from "../config.json";
-import { decryptPrivateKey, sendSol } from ".";
+import { getKeyPairFromPrivatekey, decryptPrivateKey } from ".";
 import { ObjectId } from "mongoose";
 import { subBalance } from "../bot/library";
+const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+  commitment: "confirmed",
+  wsEndpoint: "wss://api.mainnet-beta.solana.com",
+});
 
 interface TSplTransferQueueInterface {
   _id: ObjectId;
@@ -26,7 +39,7 @@ export const FeeTransferQueueUpdator = async () => {
         },
       })) as TSplTransferQueueInterface[];
 
-      // console.log("SplTransferQueueUpdator running:", queues.length);
+      console.log("SplTransferQueueUpdator running:", queues.length);
 
       if (queues.length > 0) {
         for (let i = 0; i < queues.length; i++) {
@@ -34,12 +47,32 @@ export const FeeTransferQueueUpdator = async () => {
             const privatekey = (await decryptPrivateKey(
               queues[i]?.privateKey
             )) as string;
-            const tx = await sendSol(
-              queues[i]?.amount,
-              queues[i]?.withdrawAddress,
-              privatekey
+            const sender = (await getKeyPairFromPrivatekey(privatekey)) as any;
+            const to = new PublicKey(queues[i].withdrawAddress);
+            const decimals = LAMPORTS_PER_SOL; // 1 SOL = 1e9 lamports
+            const transferAmountInDecimals = Math.floor(
+              queues[i].amount * decimals
             );
+            // Prepare transaction
+            const { lastValidBlockHeight, blockhash } =
+              await connection.getLatestBlockhash({
+                commitment: "finalized",
+              });
+            let newNonceTx = new Transaction();
 
+            newNonceTx.feePayer = sender.publicKey;
+            newNonceTx.recentBlockhash = blockhash;
+            newNonceTx.lastValidBlockHeight = lastValidBlockHeight;
+            newNonceTx.add(
+              SystemProgram.transfer({
+                fromPubkey: sender.publicKey,
+                toPubkey: to,
+                lamports: transferAmountInDecimals,
+              })
+            );
+            const tx = await sendAndConfirmTransaction(connection, newNonceTx, [
+              sender,
+            ]);
             if (tx) {
               await feeSend.updateOne({
                 _id: queues[i]._id,

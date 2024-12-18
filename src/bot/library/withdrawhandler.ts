@@ -469,22 +469,18 @@ export const applyWithdrawHandler = async (msg: any) => {
     }
     const result = await withdrawService(withdrawInfo[msg.chat.id]);
     if (withdrawInfo[msg.chat.id]?.token == config.solTokenAddress) {
-      if (result) {
-        const newText = `<a href="${config.solScanUrl}/${result}"><i>View on Solscan</i></a>`;
+      if (result?.result) {
+        const newText = `<a href="${config.solScanUrl}/${result?.result}"><i>View on Solscan</i></a>`;
         bot.sendMessage(msg.chat.id, newText, { parse_mode: "HTML" });
       } else {
-        bot.sendMessage(
-          msg.chat.id,
-          `Please try again later due to network overload`,
-          {
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "Return  👈", callback_data: "return" }],
-              ],
-            },
-          }
-        );
+        bot.sendMessage(msg.chat.id, result?.msg as string, {
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "Return  👈", callback_data: "return" }],
+            ],
+          },
+        });
       }
     }
   } catch (error) {

@@ -21,8 +21,7 @@ const ENCRYPTION_KEY = config.salt;
 const IV_LENGTH = 12;
 const connection = new Connection(config.rpcUrl);
 export let isDepositStatus = {} as any;
-const MAX_RETRIES = 5;
-const RETRY_DELAY = 1000;
+
 export const withdrawService = async (withInfo: any) => {
   try {
     const privatekey = (await decryptPrivateKey(withInfo.privateKey)) as string;
@@ -82,63 +81,6 @@ export const sendSol = async (
   privatekey: string
 ) => {
   try {
-    console.log(amount, toAddress, privatekey);
-    await delay(2000); // 1-second delay
-
-    const sender = (await getKeyPairFromPrivatekey(privatekey)) as any;
-    const to = new PublicKey(toAddress);
-    const decimals = LAMPORTS_PER_SOL; // 1 SOL = 1e9 lamports
-    const transferAmountInDecimals = Math.floor(amount * decimals);
-    // Prepare transaction
-    const { lastValidBlockHeight, blockhash } =
-      await connection.getLatestBlockhash({
-        commitment: "finalized",
-      });
-    let newNonceTx = new Transaction();
-
-    newNonceTx.feePayer = sender.publicKey;
-    newNonceTx.recentBlockhash = blockhash;
-    newNonceTx.lastValidBlockHeight = lastValidBlockHeight;
-    newNonceTx.add(
-      SystemProgram.transfer({
-        fromPubkey: sender.publicKey,
-        toPubkey: to,
-        lamports: transferAmountInDecimals,
-      })
-    );
-
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        console.log(
-          `Attempting transaction... (Attempt ${attempt} of ${MAX_RETRIES})`
-        );
-        const tx = await retrySendSol(amount, toAddress, privatekey);
-        console.log(`Transaction successful! Tx ID: ${tx}`);
-        return tx;
-      } catch (err: any) {
-        // Handle temporary connection errors like ECONNRESET
-        if (err.code === "ECONNRESET" && attempt < MAX_RETRIES) {
-          console.error(
-            `Connection reset. Retrying... (Attempt ${attempt} of ${MAX_RETRIES})`
-          );
-          await delay(RETRY_DELAY); // Wait before retrying
-        } else {
-          console.error("Transaction failed:", err.message || err);
-          return null; // Return null in case of a non-recoverable error
-        }
-      }
-    }
-  } catch (err: any) {
-    console.error("Transaction failed:", err.message || err);
-    return null;
-  }
-};
-const retrySendSol = async (
-  amount: number,
-  toAddress: string,
-  privatekey: string
-) => {
-  try {
     const sender = (await getKeyPairFromPrivatekey(privatekey)) as any;
     const to = new PublicKey(toAddress);
     const balance = await connection.getBalance(sender.publicKey);
@@ -153,15 +95,16 @@ const retrySendSol = async (
       console.log(
         "Insufficient balance to cover transaction fees or rent-exempt minimum."
       );
-      return null;
+      return {
+        result: null,
+        msg: "Insufficient balance to cover transaction fees or rent-exempt minimum.",
+      };
     }
     // Compare requested amount with maximum withdrawable amount
     const lamportsToWithdraw = Math.min(
       amount * LAMPORTS_PER_SOL,
       maxWithdrawableLamports
     );
-    // const transferAmountInDecimals = Math.floor(amount * decimals);
-    // Prepare transaction
     const { lastValidBlockHeight, blockhash } =
       await connection.getLatestBlockhash({
         commitment: "finalized",
@@ -178,12 +121,24 @@ const retrySendSol = async (
         lamports: lamportsToWithdraw,
       })
     );
-    const tx = await sendAndConfirmTransaction(connection, newNonceTx, [
-      sender,
-    ]);
-    return tx;
+    try {
+      const tx = await sendAndConfirmTransaction(connection, newNonceTx, [
+        sender,
+      ]);
+      return { result: tx, msg: `` };
+    } catch (error) {
+      console.log(error);
+      return {
+        result: null,
+        msg: `Please try again later due to network overload`,
+      };
+    }
   } catch (err: any) {
     console.log(err);
+    return {
+      result: null,
+      msg: `Please try again later due to network overload`,
+    };
   }
 };
 
@@ -347,44 +302,6 @@ export const decryptPrivateKey = (encryptedPrivateKey: string) => {
     return decrypted.toString("utf8");
   } catch (error) {
     console.log("decryptPrivateKeyError: ", error);
-  }
-};
-
-export const depositTraker = async (userId: number, flag: boolean) => {
-  isDepositStatus[userId] = {
-    status: flag,
-  };
-};
-
-export const checkTransferedTokenAmountOnSolana = async (
-  hash: string
-): Promise<any> => {
-  try {
-    const transactionResponse = await connection.getParsedTransaction(hash);
-    if (!transactionResponse) {
-      console.error("Transaction not found");
-      return null;
-    }
-
-    const tokenTransfers = [];
-    for (const instruction of transactionResponse.transaction.message
-      .instructions) {
-      const ins = instruction as any;
-      if (ins.parsed && ins.program === "spl-token") {
-        const { info, type } = ins.parsed;
-        if (type === "transfer") {
-          tokenTransfers.push({
-            from: info.source, // The source account
-            to: info.destination, // The destination account
-            amount: info.amount, // Amount transferred
-          });
-        }
-      }
-    }
-    return tokenTransfers[0];
-  } catch (err) {
-    console.log("checkTransferedTokenAmountOnSolana err", err);
-    return 0;
   }
 };
 

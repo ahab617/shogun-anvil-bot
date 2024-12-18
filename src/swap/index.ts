@@ -2,10 +2,8 @@ import { bot } from "../bot";
 import { apiSwap } from "./swap";
 import config from "../config.json";
 import swapInfoController from "../controller/swap";
-import depositController from "../controller/deposit";
 import { convertTokenAmount } from "../service/getTokenPrice";
 import { checkSolBalance, checkSplTokenBalance } from "../service/getBalance";
-import { delay, depositTraker } from "../service";
 
 const cron = require("node-cron");
 let timeAmount = 0;
@@ -46,7 +44,6 @@ const executeSwap = async (userList: any) => {
           )) as any;
           if (currentSolBalance === undefined) return;
           if (currentSolBalance >= amount + config.networkFee) {
-            await depositTraker(userId, true);
             const result = await apiSwap(
               Number(amount),
               baseDecimal,
@@ -64,12 +61,6 @@ const executeSwap = async (userList: any) => {
   <a href="${config.solScanUrl}/${result.txId}"><i>View on Solscan</i></a>`,
                 { parse_mode: "HTML" }
               );
-              const depositToken = {
-                userId: userId,
-                tokenInfo: quoteToken,
-              };
-              await depositController.create(depositToken);
-
               const newBuyProgress = buyProgress + 1;
               let swapInfoUpdate = null;
               if (buy == newBuyProgress) {
@@ -88,11 +79,7 @@ const executeSwap = async (userList: any) => {
                 };
               }
               await swapInfoController.updateOne(swapInfoUpdate);
-              delay(10000);
-              await depositTraker(userId, false);
             } else {
-              delay(10000);
-              await depositTraker(userId, false);
               return;
             }
           } else {
@@ -115,8 +102,6 @@ const executeSwap = async (userList: any) => {
           )) as any;
           if (currentTokenBalance === undefined) return;
           if (currentTokenBalance >= amount) {
-            await depositTraker(userId, true);
-
             const result = await apiSwap(
               Number(amount),
               baseDecimal,
@@ -134,11 +119,6 @@ const executeSwap = async (userList: any) => {
   <a href="${config.solScanUrl}/${result.txId}"><i>View on Solscan</i></a>`,
                 { parse_mode: "HTML" }
               );
-              const depositToken = {
-                userId: userId,
-                tokenInfo: quoteToken,
-              };
-              await depositController.create(depositToken);
               const newBuyProgress = buyProgress + 1;
               let swapInfoUpdate = null;
               if (buy == newBuyProgress) {
@@ -157,9 +137,7 @@ const executeSwap = async (userList: any) => {
                 };
               }
               await swapInfoController.updateOne(swapInfoUpdate);
-              await depositTraker(userId, false);
             } else {
-              await depositTraker(userId, false);
               return;
             }
           } else {
@@ -203,7 +181,6 @@ const executeSwap = async (userList: any) => {
             return;
           }
         } else {
-          await depositTraker(userId, true);
           const result = await apiSwap(
             Number(parseFloat(amount1.toString()).toFixed(4)),
             quoteDecimal,
@@ -241,11 +218,7 @@ const executeSwap = async (userList: any) => {
               };
             }
             await swapInfoController.updateOne(swapInfoUpdate);
-            delay(10000);
-            await depositTraker(userId, false);
           } else {
-            delay(10000);
-            await depositTraker(userId, false);
             return;
           }
         }
@@ -385,7 +358,6 @@ const executeSwap = async (userList: any) => {
         }
       }
       if (isSolStatus[userId]?.isSol && buyProgress < buy && flag) {
-        await depositTraker(userId, true);
         const result = await apiSwap(
           Number(amount),
           baseDecimal,
@@ -403,11 +375,6 @@ const executeSwap = async (userList: any) => {
   <a href="${config.solScanUrl}/${result.txId}"><i>View on Solscan</i></a>`,
             { parse_mode: "HTML" }
           );
-          const depositToken = {
-            userId: userId,
-            tokenInfo: quoteToken,
-          };
-          await depositController.create(depositToken);
 
           const newBuyProgress = buyProgress + 1;
           let swapInfoUpdate = null;
@@ -429,11 +396,7 @@ const executeSwap = async (userList: any) => {
             };
           }
           await swapInfoController.updateOne(swapInfoUpdate);
-          delay(10000);
-          await depositTraker(userId, false);
         } else {
-          delay(10000);
-          await depositTraker(userId, false);
           return;
         }
       } else if (
@@ -447,7 +410,6 @@ const executeSwap = async (userList: any) => {
           quoteToken
         )) as any;
         if (amount1 === undefined) return;
-        await depositTraker(userId, true);
         const result = await apiSwap(
           Number(parseFloat(amount1.toString()).toFixed(4)),
           quoteDecimal,
@@ -487,9 +449,7 @@ const executeSwap = async (userList: any) => {
             };
           }
           await swapInfoController.updateOne(swapInfoUpdate);
-          await depositTraker(userId, false);
         } else {
-          await depositTraker(userId, false);
           return;
         }
       } else {
@@ -517,7 +477,6 @@ const processSwap = async (interval: number) => {
     }
 
     timeAmount += interval;
-    console.log(timeAmount);
     const swapInfo = await swapInfoController.swapInfo();
     if (swapInfo?.data.length > 0) {
       for (let i = 0; i < swapInfo.data.length; i++) {

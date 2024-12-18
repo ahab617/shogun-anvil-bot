@@ -1,7 +1,6 @@
 import { walletHandler } from "../library/walletHandler";
 import { returnHandler } from "../library/returnHandler";
 import { tokenSettingHandler } from "../library/tokenSettingHandler";
-import { confirm_txSignatureHandler } from "../library/depositHandler";
 import {
   withdrawSelectHandler,
   applyWithdrawHandler,
@@ -23,7 +22,6 @@ import {
   deleteTokenHandler,
   confirmTokenHandler,
 } from "../library/deleteHandler";
-import { inputToken_txSignature } from "../../swap/callback/deposit";
 
 export const callBackHandler = async (msg: any, action: string | any) => {
   switch (action) {
@@ -42,16 +40,12 @@ export const callBackHandler = async (msg: any, action: string | any) => {
         deleteTokenHandler(msg);
       } else if (action.startsWith("agree_delete_token")) {
         confirmTokenHandler(msg);
-      } else if (action.startsWith("confirm_txSignature")) {
-        confirm_txSignatureHandler(msg, action);
       } else if (action.startsWith("applyToken")) {
         withdrawSelectHandler(msg, action);
       } else if (action.startsWith("selectCoin")) {
         swapSettingHandler(msg);
       } else if (action.startsWith("agree_swap_delete")) {
         swapConfirmHandler(msg);
-      } else if (action.startsWith("inputToken_txSignature")) {
-        inputToken_txSignature(msg);
       } else if (action.startsWith("withdraw_apply")) {
         applyWithdrawHandler(msg);
       } else if (action.startsWith("amountAll_")) {
