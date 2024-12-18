@@ -88,6 +88,8 @@ const FeeDataSchema = new Schema({
   privateKey: { type: String, required: true },
   status: { type: Number, default: 0 },
   txId: { type: String, default: "" },
+  flag: { type: Boolean, required: true },
+  miniAmount: { type: Number, required: true },
 });
 
 export const Swap = mongoose.model("swaps", SwapSchema);

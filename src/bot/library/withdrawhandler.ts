@@ -1,25 +1,14 @@
 import { bot } from "../index";
 import config from "../../config.json";
-import {
-  PublicKey,
-  Connection,
-  clusterApiUrl,
-  LAMPORTS_PER_SOL,
-} from "@solana/web3.js";
-import {
-  checkSolBalance,
-  checkSplTokenBalance,
-} from "../../service/getBalance";
+import { PublicKey, Connection, clusterApiUrl } from "@solana/web3.js";
+import { checkSolBalance } from "../../service/getBalance";
 import { estimateSOLTransferFee, withdrawService } from "../../service";
 import walletController from "../../controller/wallet";
 import { removeAnswerCallback, subBalance } from "./index";
 import tokenSetting from "../../controller/tokenSetting";
 import { getWalletTokenBalances } from "../../service";
 import axios from "axios";
-const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-  commitment: "confirmed",
-  wsEndpoint: "wss://api.mainnet-beta.solana.com",
-});
+
 interface TwithdrawInfo {
   userId: number;
   withdrawAddress: string;
@@ -408,6 +397,7 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
           withdrawAddress[msg.chat.id].address,
           Number(balance)
         )) || 0;
+
       const r = await subBalance(
         (balance * 1e9 - (fee || config.withdrawFee * 1e9)) / 1e9
       );

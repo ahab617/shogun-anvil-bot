@@ -8,7 +8,6 @@ import {
   Transaction,
   sendAndConfirmTransaction,
   SystemProgram,
-  SendTransactionError,
 } from "@solana/web3.js";
 import crypto from "crypto";
 import * as Web3 from "@solana/web3.js";
@@ -20,12 +19,10 @@ import { getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
 const ALGORITHM = "aes-256-gcm";
 const ENCRYPTION_KEY = config.salt;
 const IV_LENGTH = 12;
-const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-  commitment: "confirmed",
-  wsEndpoint: "wss://api.mainnet-beta.solana.com",
-});
+const connection = new Connection(config.rpcUrl);
 export let isDepositStatus = {} as any;
-
+const MAX_RETRIES = 5;
+const RETRY_DELAY = 1000;
 export const withdrawService = async (withInfo: any) => {
   try {
     const privatekey = (await decryptPrivateKey(withInfo.privateKey)) as string;
@@ -79,24 +76,24 @@ export const withdrawService = async (withInfo: any) => {
     console.log("withdrawServiceError: ", error);
   }
 };
-const sendSol = async (
+export const sendSol = async (
   amount: number,
   toAddress: string,
   privatekey: string
 ) => {
   try {
+    console.log(amount, toAddress, privatekey);
     await delay(2000); // 1-second delay
+
     const sender = (await getKeyPairFromPrivatekey(privatekey)) as any;
     const to = new PublicKey(toAddress);
     const decimals = LAMPORTS_PER_SOL; // 1 SOL = 1e9 lamports
-    const transferAmountInDecimals = Number(
-      Math.floor(amount * decimals)
-        .toString()
-        .split(".")[0]
-    );
+    const transferAmountInDecimals = Math.floor(amount * decimals);
     // Prepare transaction
     const { lastValidBlockHeight, blockhash } =
-      await connection.getLatestBlockhash({ commitment: "finalized" });
+      await connection.getLatestBlockhash({
+        commitment: "finalized",
+      });
     let newNonceTx = new Transaction();
 
     newNonceTx.feePayer = sender.publicKey;
@@ -109,39 +106,84 @@ const sendSol = async (
         lamports: transferAmountInDecimals,
       })
     );
-    // Simulate the transaction to estimate fees
-    const feeCalculator = await connection.getFeeForMessage(
-      newNonceTx.compileMessage()
-    );
-    try {
-      const tx = await sendAndConfirmTransaction(connection, newNonceTx, [
-        sender,
-      ]);
-      return tx;
-    } catch (err: any) {
-      if (err instanceof SendTransactionError) {
-        console.error("Transaction failed:", err.message);
-      }
 
-      // Retry if blockhash expired
-      if (err.message.includes("Blockhash not found")) {
-        const { blockhash, lastValidBlockHeight } =
-          await connection.getLatestBlockhash({ commitment: "finalized" });
-        newNonceTx.recentBlockhash = blockhash;
-        newNonceTx.lastValidBlockHeight = lastValidBlockHeight;
-
-        const retryTx = await sendAndConfirmTransaction(
-          connection,
-          newNonceTx,
-          [sender]
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        console.log(
+          `Attempting transaction... (Attempt ${attempt} of ${MAX_RETRIES})`
         );
-        return retryTx;
+        const tx = await retrySendSol(amount, toAddress, privatekey);
+        console.log(`Transaction successful! Tx ID: ${tx}`);
+        return tx;
+      } catch (err: any) {
+        // Handle temporary connection errors like ECONNRESET
+        if (err.code === "ECONNRESET" && attempt < MAX_RETRIES) {
+          console.error(
+            `Connection reset. Retrying... (Attempt ${attempt} of ${MAX_RETRIES})`
+          );
+          await delay(RETRY_DELAY); // Wait before retrying
+        } else {
+          console.error("Transaction failed:", err.message || err);
+          return null; // Return null in case of a non-recoverable error
+        }
       }
-      return null;
     }
   } catch (err: any) {
     console.error("Transaction failed:", err.message || err);
     return null;
+  }
+};
+const retrySendSol = async (
+  amount: number,
+  toAddress: string,
+  privatekey: string
+) => {
+  try {
+    const sender = (await getKeyPairFromPrivatekey(privatekey)) as any;
+    const to = new PublicKey(toAddress);
+    const balance = await connection.getBalance(sender.publicKey);
+    // Define constants
+    const rentExemptMin = 0.00203928 * LAMPORTS_PER_SOL; // Rent-exempt minimum in lamports
+    const transactionFee = 5000; // Approximate transaction fee in lamports
+
+    // Calculate maximum withdrawable amount
+    const maxWithdrawableLamports = balance - rentExemptMin - transactionFee;
+
+    if (maxWithdrawableLamports <= 0) {
+      console.log(
+        "Insufficient balance to cover transaction fees or rent-exempt minimum."
+      );
+      return null;
+    }
+    // Compare requested amount with maximum withdrawable amount
+    const lamportsToWithdraw = Math.min(
+      amount * LAMPORTS_PER_SOL,
+      maxWithdrawableLamports
+    );
+    // const transferAmountInDecimals = Math.floor(amount * decimals);
+    // Prepare transaction
+    const { lastValidBlockHeight, blockhash } =
+      await connection.getLatestBlockhash({
+        commitment: "finalized",
+      });
+    let newNonceTx = new Transaction();
+
+    newNonceTx.feePayer = sender.publicKey;
+    newNonceTx.recentBlockhash = blockhash;
+    newNonceTx.lastValidBlockHeight = lastValidBlockHeight;
+    newNonceTx.add(
+      SystemProgram.transfer({
+        fromPubkey: sender.publicKey,
+        toPubkey: to,
+        lamports: lamportsToWithdraw,
+      })
+    );
+    const tx = await sendAndConfirmTransaction(connection, newNonceTx, [
+      sender,
+    ]);
+    return tx;
+  } catch (err: any) {
+    console.log(err);
   }
 };
 
@@ -348,12 +390,6 @@ export const checkTransferedTokenAmountOnSolana = async (
 
 export const getWalletTokenBalances = async (walletAddress: string) => {
   try {
-    // Create a connection to the Solana RPC endpoint
-    const connection = new Connection(
-      "https://api.mainnet-beta.solana.com",
-      "confirmed"
-    );
-
     // Convert the wallet address into a PublicKey
     const walletPublicKey = new PublicKey(walletAddress);
 

@@ -12,10 +12,8 @@ import { NATIVE_MINT } from "@solana/spl-token";
 import { decryptPrivateKey } from "../service/index";
 import { API_URLS } from "@raydium-io/raydium-sdk-v2";
 import { fetchTokenAccountData } from "./config";
-const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-  commitment: "confirmed",
-  wsEndpoint: "wss://api.mainnet-beta.solana.com",
-});
+import config from "../config.json";
+const connection = new Connection(config.rpcUrl);
 export let walletPublic = "" as string;
 
 interface SwapCompute {

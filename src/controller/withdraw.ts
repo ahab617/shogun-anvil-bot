@@ -18,8 +18,6 @@ const find = async (props: any) => {
 
 const create = async (props: any) => {
   try {
-    console.log("Attempting to insert record:", props);
-
     const newProps = {
       ...props,
       uniqueKey: `${props.userId}-${Date.now()}`, // Add a unique key or modify conflicting fields

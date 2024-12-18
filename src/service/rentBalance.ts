@@ -1,8 +1,6 @@
 import { Connection, clusterApiUrl, LAMPORTS_PER_SOL } from "@solana/web3.js";
-const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-  commitment: "confirmed",
-  wsEndpoint: "wss://api.mainnet-beta.solana.com",
-});
+import config from "../config.json";
+const connection = new Connection(config.rpcUrl);
 export const rentExemption = async () => {
   try {
     const miniBalance = await connection.getMinimumBalanceForRentExemption(0);

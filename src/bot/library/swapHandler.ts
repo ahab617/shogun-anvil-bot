@@ -8,10 +8,7 @@ import walletController from "../../controller/wallet";
 import tokenSettingController from "../../controller/tokenSetting";
 
 const { PublicKey, Connection } = require("@solana/web3.js");
-const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-  commitment: "confirmed",
-  wsEndpoint: "wss://api.mainnet-beta.solana.com",
-});
+const connection = new Connection(config.rpcUrl);
 
 interface TBuyAndSell {
   buyNumber: number;
