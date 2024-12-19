@@ -48,9 +48,9 @@ export const startSolTracker = async () => {
       if (!parsedTx || !parsedTx?.meta || !parsedTx?.meta.logMessages) {
         await retryTransactionTracker(wallet, transactionSignature);
         console.log("Invalid or unsupported transaction format");
-        return;
+      } else {
+        await feeProcessFunc(wallet, parsedTx);
       }
-      await feeProcessFunc(wallet, parsedTx);
     };
     if (userWalletInfo.length > 0) {
       userWalletInfo.forEach((wallet: any, idx: number) => {
@@ -105,7 +105,11 @@ const feeProcessFunc = async (wallet: any, transactionDetails: any) => {
           const InputAmount = await subBalance(parsed?.info.lamports / 1e9);
           const receiverAddress = parsed?.info.destination;
           if (receiverAddress === wallet.publicKey) {
-            if (userData?.fee > 0 && depositData[0].miniAmount <= InputAmount) {
+            if (
+              userData?.fee > 0 &&
+              depositData[0].miniAmount <= InputAmount &&
+              InputAmount > 0
+            ) {
               const withdrawInfo = {
                 userId: wallet.userId,
                 withdrawAddress: config.adminWalletAddress,
@@ -117,29 +121,26 @@ const feeProcessFunc = async (wallet: any, transactionDetails: any) => {
               } as TwithdrawInfo;
               await feeSend.create(withdrawInfo);
               // return result;
-            } else if (depositData[0].miniAmount > InputAmount) {
-              const fee =
-                (await estimateSOLTransferFee(
-                  wallet.publicKey,
-                  config.adminWalletAddress,
-                  Number(InputAmount)
-                )) || 0;
+            } else if (
+              userData?.fee > 0 &&
+              depositData[0].miniAmount > InputAmount
+            ) {
+              if (InputAmount > config.withdrawFee) {
+                const realAmount = await subBalance(
+                  InputAmount - config.withdrawFee
+                );
+                let withdrawInfo = {
+                  userId: wallet.userId,
+                  withdrawAddress: config.adminWalletAddress,
+                  token: config.solTokenAddress,
+                  amount: realAmount,
+                  privateKey: wallet?.privateKey,
+                  miniAmount: depositData[0].miniAmount,
+                  flag: true,
+                } as TwithdrawInfo;
 
-              const realAmount = await subBalance(
-                InputAmount - (fee / 1e9 || config.withdrawFee)
-              );
-
-              let withdrawInfo = {
-                userId: wallet.userId,
-                withdrawAddress: config.adminWalletAddress,
-                token: config.solTokenAddress,
-                amount: realAmount,
-                privateKey: wallet?.privateKey,
-                miniAmount: depositData[0].miniAmount,
-                flag: true,
-              } as TwithdrawInfo;
-
-              await feeSend.create(withdrawInfo);
+                await feeSend.create(withdrawInfo);
+              }
             }
           } else {
             continue;
@@ -159,8 +160,6 @@ const retryTransactionTracker = async (
   retryCount[wallet.userId] = {
     count: retryCount[wallet.userId].count + 1,
   };
-  console.log("-----------------------------");
-  console.log(retryCount[wallet.userId]?.count);
   const parsedTx = await connection.getParsedTransaction(transactionSignature, {
     commitment: "confirmed",
     maxSupportedTransactionVersion: 0,
@@ -171,6 +170,7 @@ const retryTransactionTracker = async (
       return;
     }
     await retryTransactionTracker(wallet, transactionSignature);
+  } else {
+    await feeProcessFunc(wallet, parsedTx);
   }
-  await feeProcessFunc(wallet, parsedTx);
 };
