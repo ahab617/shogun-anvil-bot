@@ -19,7 +19,11 @@ import { getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
 const ALGORITHM = "aes-256-gcm";
 const ENCRYPTION_KEY = config.salt;
 const IV_LENGTH = 12;
-const connection = new Connection(config.rpcUrl);
+const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+  commitment: "confirmed",
+  wsEndpoint: "wss://api.mainnet-beta.solana.com",
+});
+
 export let isDepositStatus = {} as any;
 
 export const withdrawService = async (withInfo: any) => {
@@ -121,18 +125,11 @@ export const sendSol = async (
         lamports: lamportsToWithdraw,
       })
     );
-    try {
-      const tx = await sendAndConfirmTransaction(connection, newNonceTx, [
-        sender,
-      ]);
-      return { result: tx, msg: `` };
-    } catch (error) {
-      console.log(error);
-      return {
-        result: null,
-        msg: `Please try again later due to network overload`,
-      };
-    }
+
+    const tx = await sendAndConfirmTransaction(connection, newNonceTx, [
+      sender,
+    ]);
+    return { result: tx, msg: `` };
   } catch (err: any) {
     console.log(err);
     return {

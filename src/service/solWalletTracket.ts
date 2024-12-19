@@ -5,7 +5,10 @@ export class SolWalletTracker {
   private walletAddresses: Map<string, { subscriptionId: number }>;
 
   constructor() {
-    this.connection = new Connection(config.rpcUrl);
+    this.connection = new Connection(clusterApiUrl("mainnet-beta"), {
+      commitment: "confirmed",
+      wsEndpoint: "wss://api.mainnet-beta.solana.com",
+    });
     this.walletAddresses = new Map();
   }
 

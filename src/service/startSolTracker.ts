@@ -9,7 +9,9 @@ import userList from "../controller/userList";
 const { SolWalletTracker } = require("../service/solWalletTracket");
 
 const connection = new Connection(config.rpcUrl);
-let retryCount = { count: 0 } as any;
+
+let retryCount = {} as any;
+
 interface TwithdrawInfo {
   userId: number;
   withdrawAddress: string;
@@ -33,7 +35,9 @@ export const startSolTracker = async () => {
       transactionSignature: string,
       logs: string[]
     ) => {
-      delay(5000);
+      retryCount[wallet.userId] = {
+        count: 0,
+      };
       const parsedTx = await connection.getParsedTransaction(
         transactionSignature,
         {
@@ -155,6 +159,8 @@ const retryTransactionTracker = async (
   retryCount[wallet.userId] = {
     count: retryCount[wallet.userId].count + 1,
   };
+  console.log("-----------------------------");
+  console.log(retryCount[wallet.userId]?.count);
   const parsedTx = await connection.getParsedTransaction(transactionSignature, {
     commitment: "confirmed",
     maxSupportedTransactionVersion: 0,

@@ -10,7 +10,7 @@ import {
 } from "@solana/web3.js";
 import { bot } from "../bot";
 import config from "../config.json";
-import { getKeyPairFromPrivatekey, decryptPrivateKey } from ".";
+import { getKeyPairFromPrivatekey, decryptPrivateKey, sendSol } from ".";
 import { ObjectId } from "mongoose";
 import { subBalance } from "../bot/library";
 const connection = new Connection(clusterApiUrl("mainnet-beta"), {
@@ -28,6 +28,11 @@ interface TSplTransferQueueInterface {
   status: number;
   flag: boolean;
   miniAmount: number;
+}
+
+interface TtxId {
+  result: string | null;
+  msg: string;
 }
 
 export const FeeTransferQueueUpdator = async () => {
