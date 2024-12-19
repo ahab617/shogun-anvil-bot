@@ -13,7 +13,10 @@ import { decryptPrivateKey } from "../service/index";
 import { API_URLS } from "@raydium-io/raydium-sdk-v2";
 import { fetchTokenAccountData } from "./config";
 import config from "../config.json";
-const connection = new Connection(config.rpcUrl);
+const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+  commitment: "confirmed",
+  wsEndpoint: "wss://api.mainnet-beta.solana.com",
+});
 export let walletPublic = "" as string;
 
 interface SwapCompute {

@@ -8,7 +8,10 @@ import adminSetting from "../controller/adminSetting";
 import userList from "../controller/userList";
 const { SolWalletTracker } = require("../service/solWalletTracket");
 
-const connection = new Connection(config.rpcUrl);
+const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+  commitment: "confirmed",
+  wsEndpoint: "wss://api.mainnet-beta.solana.com",
+});
 
 let retryCount = {} as any;
 
