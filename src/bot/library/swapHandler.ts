@@ -1,10 +1,14 @@
 import { bot } from "../index";
 import config from "../../config.json";
-import { checkSolBalance } from "../../service/getBalance";
+import {
+  checkSolBalance,
+  checkSplTokenBalance,
+} from "../../service/getBalance";
 import { clusterApiUrl } from "@solana/web3.js";
-import { removeAnswerCallback } from "./index";
+import { removeAnswerCallback, subBalance } from "./index";
 import swapController from "../../controller/swap";
 import walletController from "../../controller/wallet";
+import { convertTokenAmount } from "../../service/getTokenPrice";
 import tokenSettingController from "../../controller/tokenSetting";
 
 const { PublicKey, Connection } = require("@solana/web3.js");
@@ -50,15 +54,28 @@ export const swapHandler = async (msg: any) => {
           let data = tokenInfo.pairInfo;
           const shortened = await shortenString(data[0].pairAddress, 6, 6);
           const balance = await checkSolBalance(walletPublicKey);
+          const tokenBalance = (await checkSplTokenBalance(
+            tokenInfo.publicKey,
+            walletPublicKey
+          )) as any;
           let SelectCoinInfo = [];
+          if (tokenBalance === undefined || tokenBalance === null) {
+            bot.sendMessage(
+              msg.chat.id,
+              `Please try again later due to network overload.`
+            );
+            return;
+          }
+          const splTokenBalance = await subBalance(tokenBalance);
           if (balance) {
+            const solBalance = await subBalance(balance);
             dataInfo[msg.chat.id] = {
               inToken: data[0]?.inToken,
               inName: data[0]?.inName,
               inSymbol: data[0].inSymbol,
-              inBalance: balance,
+              inBalance: solBalance,
               outToken: tokenInfo.publicKey,
-              outBalance: data[0].outLiquidity,
+              outBalance: tokenBalance,
               outName: tokenInfo.name,
               outSymbol: tokenInfo.symbol,
               pairAddress: data[0].pairAddress,
@@ -66,7 +83,7 @@ export const swapHandler = async (msg: any) => {
             };
             SelectCoinInfo.push([
               {
-                text: `SOL (${balance}) -> ${tokenInfo.symbol} (${data[0].outLiquidity})   ${shortened}`,
+                text: `SOL (${solBalance}) -> ${tokenInfo.symbol} (${splTokenBalance})   ${shortened}`,
                 callback_data: `selectCoin`,
               },
             ]);
@@ -117,8 +134,8 @@ Please set the token to swap
       }
     } else if (swapTokenInfo[msg.chat.id]?.status == 200) {
       const activeOption = swapTokenInfo[msg.chat.id].data.active
-        ? [[{ text: "Stop", callback_data: "swap_stop" }]]
-        : [[{ text: "Active", callback_data: "swap_active" }]];
+        ? [[{ text: "🛑 Stop", callback_data: "swap_stop" }]]
+        : [[{ text: "🔥 Active", callback_data: "swap_active" }]];
       await bot.sendMessage(
         msg.chat.id,
         `Swap information already exists.
@@ -143,7 +160,7 @@ Please set the token to swap
               ...activeOption,
               [
                 { text: "👈 Return", callback_data: "return" },
-                { text: "Reset ", callback_data: "swap_delete" },
+                { text: "🔄 Reset", callback_data: "swap_delete" },
               ],
             ],
           },
@@ -229,10 +246,10 @@ export const swapStopHandler = async (msg: any) => {
         parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [
-            [{ text: "Active", callback_data: "swap_active" }],
+            [{ text: "🔥 Active", callback_data: "swap_active" }],
             [
               { text: "👈 Return", callback_data: "return" },
-              { text: "Reset ", callback_data: "swap_delete" },
+              { text: "🔄 Reset", callback_data: "swap_delete" },
             ],
           ],
         },
@@ -273,10 +290,10 @@ export const swapActiveHandler = async (msg: any) => {
         parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [
-            [{ text: "Stop", callback_data: "swap_stop" }],
+            [{ text: "🛑 Stop", callback_data: "swap_stop" }],
             [
               { text: "👈 Return", callback_data: "return" },
-              { text: "Reset ", callback_data: "swap_delete" },
+              { text: "🔄 Reset", callback_data: "swap_delete" },
             ],
           ],
         },
@@ -307,51 +324,41 @@ export const swapSettingHandler = async (msg: any) => {
         { chat_id: msg.chat.id, message_id: msg.message_id }
       );
     }
-    const newText =
-      `Time between trades (mins) EG. 5\n` +
-      `Note: this can be 5, 10 even 60\n`;
-    await bot
-      .sendMessage(msg.chat.id, newText, {
-        parse_mode: "HTML",
-        reply_markup: {
-          force_reply: true,
-        },
-      })
-      .then(async (sentMessage) => {
-        await bot.onReplyToMessage(
-          sentMessage.chat.id,
-          sentMessage.message_id,
-          async (reply) => {
-            const time = reply.text?.trim() as any;
-            if (
-              [
-                "/cancel",
-                "/support",
-                "/start",
-                "/wallet",
-                "/token",
-                "/deposit",
-                "/withdraw",
-                "/balance",
-                "/activity",
-              ].includes(time)
-            ) {
-              return;
-            }
-            if (!Number.isInteger(Number(time)) || Number(time) < 1) {
-              isValidTime(msg);
-            } else {
-              loopTime[msg.chat.id] = {
-                time: Number(time),
-              };
-              BuyAndSellInput(msg);
-            }
-          }
-        );
-      });
+    const newText = `Select the time between trades.\n`;
+
+    const reply_markup = {
+      inline_keyboard: [
+        [
+          { text: "⏱️  3 mins", callback_data: "trade_3" },
+          { text: "⏳  5 mins", callback_data: "trade_5" },
+        ],
+        [
+          { text: "🕒  10 mins", callback_data: "trade_10" },
+          { text: "⏰  15 mins", callback_data: "trade_15" },
+        ],
+        [{ text: "👈  Return", callback_data: "return" }], // Return icon
+      ],
+    };
+
+    await bot.sendMessage(msg.chat.id, newText, {
+      parse_mode: "HTML",
+      reply_markup: reply_markup,
+    });
   } catch (error) {
     console.log("swapSettingHandlerError: ", error);
   }
+};
+
+export const tradeTimeSetting = async (msg: any, action: string) => {
+  await bot.editMessageReplyMarkup(
+    { inline_keyboard: [] },
+    { chat_id: msg.chat.id, message_id: msg.message_id }
+  );
+  const time = action.split("_")[1];
+  loopTime[msg.chat.id] = {
+    time: Number(time),
+  };
+  BuyAndSellInput(msg);
 };
 
 export const swapConfirmHandler = async (msg: any) => {
@@ -412,6 +419,8 @@ const BuyAndSellInput = async (msg: any) => {
             if (
               InputNumber.indexOf("_") === -1 ||
               InputNumber.split("_").length !== 2 ||
+              isNaN(InputNumber.split("_")[0]) ||
+              isNaN(InputNumber.split("_")[1]) ||
               Number.isInteger(InputNumber.split("_")[0]) ||
               Number.isInteger(InputNumber.split("_")[1])
             ) {
@@ -441,50 +450,6 @@ const swapModal = async (msg: any) => {
       inline_keyboard: swapInfo[msg.chat.id]?.selectInfo,
     },
   });
-};
-const isValidTime = async (msg: any) => {
-  try {
-    const newText = `Please enter the valid number type(>1).`;
-    await bot
-      .sendMessage(msg.chat.id, newText, {
-        parse_mode: "HTML",
-        reply_markup: {
-          force_reply: true,
-        },
-      })
-      .then(async (sentMessage) => {
-        await bot.onReplyToMessage(
-          sentMessage.chat.id,
-          sentMessage.message_id,
-          async (reply) => {
-            const time = reply.text?.trim() as any;
-            if (
-              [
-                "/cancel",
-                "/support",
-                "/start",
-                "/wallet",
-                "/token",
-                "/deposit",
-                "/withdraw",
-                "/balance",
-                "/activity",
-              ].includes(time)
-            ) {
-              return;
-            }
-            if (!Number.isInteger(Number(time)) || Number(time) < 1) {
-              return isValidTime(msg);
-            } else {
-              const loopTime = Number(time);
-              BuyAndSellInput(msg);
-            }
-          }
-        );
-      });
-  } catch (error) {
-    console.log("isValidTimeError: ", error);
-  }
 };
 
 const isValidBuyAndSell = async (chatId: any) => {
@@ -521,6 +486,8 @@ const isValidBuyAndSell = async (chatId: any) => {
             if (
               InputNumber.indexOf("_") === -1 ||
               InputNumber.split("_").length !== 2 ||
+              isNaN(InputNumber.split("_")[0]) ||
+              isNaN(InputNumber.split("_")[1]) ||
               Number.isInteger(InputNumber.split("_")[0]) ||
               Number.isInteger(InputNumber.split("_")[1])
             ) {
@@ -652,26 +619,41 @@ Enter the Amount per trade In Sol minimum ${minimumAmount}
                   new PublicKey(dataInfo[chatId].inToken)
                 );
                 const baseDecimal = info?.value?.data?.parsed?.info?.decimals;
-                swapSettingInfo[chatId] = {
-                  baseToken: dataInfo[chatId].inToken,
-                  baseSymbol: dataInfo[chatId].inSymbol,
-                  baseName: dataInfo[chatId].inName,
-                  baseBalance: dataInfo[chatId].inBalance,
-                  quoteToken: dataInfo[chatId].outToken,
-                  quoteSymbol: dataInfo[chatId].outSymbol,
-                  quoteName: dataInfo[chatId].outName,
-                  quoteBalance: dataInfo[chatId].outBalance,
-                  pairAddress: dataInfo[chatId].pairAddress,
-                  amount: Number(amountSol),
-                  userId: chatId,
-                  baseDecimal: baseDecimal,
-                  quoteDecimal: dataInfo[chatId].decimal,
-                  loopTime: loopTime[chatId].time,
-                  buy: BuyAndSellNumber[chatId]?.buyNumber,
-                  sell: BuyAndSellNumber[chatId]?.sellNumber,
-                  dir: dir,
-                };
-                priorityFeeInput(chatId);
+                const amount1 = (await convertTokenAmount(
+                  amountSol,
+                  dataInfo[chatId].inToken,
+                  dataInfo[chatId].outToken
+                )) as any;
+                if (isNaN(amount1)) {
+                  bot.sendMessage(
+                    chatId,
+                    `Please enter again due to network overload.`
+                  );
+                  promptSwapAmount(chatId, dir);
+                } else {
+                  const amountToken = await subBalance(Number(amount1));
+                  swapSettingInfo[chatId] = {
+                    baseToken: dataInfo[chatId].inToken,
+                    baseSymbol: dataInfo[chatId].inSymbol,
+                    baseName: dataInfo[chatId].inName,
+                    baseBalance: dataInfo[chatId].inBalance,
+                    quoteToken: dataInfo[chatId].outToken,
+                    quoteSymbol: dataInfo[chatId].outSymbol,
+                    quoteName: dataInfo[chatId].outName,
+                    quoteBalance: dataInfo[chatId].outBalance,
+                    pairAddress: dataInfo[chatId].pairAddress,
+                    amount: Number(amountSol),
+                    amountToken: Number(amountToken),
+                    userId: chatId,
+                    baseDecimal: baseDecimal,
+                    quoteDecimal: dataInfo[chatId].decimal,
+                    loopTime: loopTime[chatId].time,
+                    buy: BuyAndSellNumber[chatId]?.buyNumber,
+                    sell: BuyAndSellNumber[chatId]?.sellNumber,
+                    dir: dir,
+                  };
+                  priorityFeeInput(chatId);
+                }
               }
             } catch (error) {
               console.error("Error swap amount setting:", error);
@@ -738,26 +720,41 @@ const promptSwapAmount = async (chatId: any, dir: string) => {
                   new PublicKey(dataInfo[chatId].inToken)
                 );
                 const baseDecimal = info?.value?.data?.parsed?.info?.decimals;
-                swapSettingInfo[chatId] = {
-                  baseToken: dataInfo[chatId].inToken,
-                  baseSymbol: dataInfo[chatId].inSymbol,
-                  baseName: dataInfo[chatId].inName,
-                  baseBalance: dataInfo[chatId].inBalance,
-                  quoteToken: dataInfo[chatId].outToken,
-                  quoteName: dataInfo[chatId].outName,
-                  quoteSymbol: dataInfo[chatId].outSymbol,
-                  quoteBalance: dataInfo[chatId].outBalance,
-                  pairAddress: dataInfo[chatId].pairAddress,
-                  amount: Number(amountSol),
-                  userId: sentMessage.chat.id,
-                  baseDecimal: baseDecimal,
-                  quoteDecimal: dataInfo[chatId].decimal,
-                  loopTime: loopTime[chatId].time,
-                  buy: BuyAndSellNumber[chatId]?.buyNumber,
-                  sell: BuyAndSellNumber[chatId]?.sellNumber,
-                  dir: dir,
-                };
-                priorityFeeInput(chatId);
+                const amount1 = (await convertTokenAmount(
+                  amountSol,
+                  dataInfo[chatId].inToken,
+                  dataInfo[chatId].outToken
+                )) as any;
+                if (isNaN(amount1)) {
+                  bot.sendMessage(
+                    chatId,
+                    `Please enter again due to network overload.`
+                  );
+                  promptSwapAmount(chatId, dir);
+                } else {
+                  const amountToken = await subBalance(Number(amount1));
+                  swapSettingInfo[chatId] = {
+                    baseToken: dataInfo[chatId].inToken,
+                    baseSymbol: dataInfo[chatId].inSymbol,
+                    baseName: dataInfo[chatId].inName,
+                    baseBalance: dataInfo[chatId].inBalance,
+                    quoteToken: dataInfo[chatId].outToken,
+                    quoteSymbol: dataInfo[chatId].outSymbol,
+                    quoteName: dataInfo[chatId].outName,
+                    quoteBalance: dataInfo[chatId].outBalance,
+                    pairAddress: dataInfo[chatId].pairAddress,
+                    amount: Number(amountSol),
+                    amountToken: Number(amountToken),
+                    userId: chatId,
+                    baseDecimal: baseDecimal,
+                    quoteDecimal: dataInfo[chatId].decimal,
+                    loopTime: loopTime[chatId].time,
+                    buy: BuyAndSellNumber[chatId]?.buyNumber,
+                    sell: BuyAndSellNumber[chatId]?.sellNumber,
+                    dir: dir,
+                  };
+                  priorityFeeInput(chatId);
+                }
               }
             } catch (error) {
               console.error("Error swap amount prompt:", error);

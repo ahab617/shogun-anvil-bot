@@ -32,6 +32,7 @@ const SwapSchema = new Schema({
   baseDecimal: { type: Number, required: true },
   quoteDecimal: { type: Number, required: true },
   amount: { type: Number, required: true },
+  amountToken: { type: Number, required: true },
   userId: { type: Number, required: true },
   buy: { type: Number, required: true },
   sell: { type: Number, required: true },

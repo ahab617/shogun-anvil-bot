@@ -38,6 +38,7 @@ const swapInfo = async () => {
 const create = async (tokenInfo: any) => {
   try {
     const newSwap = new Swap(tokenInfo);
+
     const newSwapSave = await newSwap.save();
     if (newSwapSave) {
       return {
@@ -47,7 +48,7 @@ const create = async (tokenInfo: any) => {
       };
     }
   } catch (error) {
-    throw new Error("Failed to create swapInfo");
+    console.log("Failed to create swapInfo", error);
   }
 };
 

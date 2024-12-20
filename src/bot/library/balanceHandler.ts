@@ -41,6 +41,7 @@ export const balanceHandler = async (msg: any) => {
         const solTokenText =
           `<b>Name: </b>  Solana\n` +
           `<b>Symbol: </b>  SOL\n` +
+          `<b>Decimals: </b>  9\n` +
           `<b>Token Address:</b>  <code>${config.solTokenAddress}</code>\n` +
           `<b>Balance: </b>  ${solBalance}\n\n`;
         let splTokenText = ``;

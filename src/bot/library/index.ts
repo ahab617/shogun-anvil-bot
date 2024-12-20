@@ -50,6 +50,5 @@ export const deleteMessage1 = async (message: Message, message_id: number) => {
 
 export const subBalance = async (text: number) => {
   const r = Number(Math.floor(text * 1e6) / 1e6);
-  console.log(rainbow);
   return r;
 };

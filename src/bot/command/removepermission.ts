@@ -25,7 +25,7 @@ export default new Commands(
     ) {
       const text = msg.text;
       const userId = text.replace(/^\/removepermission/, "").trim() || "0";
-      if (!Number.isInteger(Number(userId))) {
+      if (isNaN(userId) || !Number.isInteger(Number(userId))) {
         bot.sendMessage(msg.chat.id, `Please enter the valid user ID.`);
       } else {
         const result = await userListController.updateOne({

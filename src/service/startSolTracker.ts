@@ -50,7 +50,6 @@ export const startSolTracker = async () => {
       );
       if (!parsedTx || !parsedTx?.meta || !parsedTx?.meta.logMessages) {
         await retryTransactionTracker(wallet, transactionSignature);
-        console.log("Invalid or unsupported transaction format");
       } else {
         await feeProcessFunc(wallet, parsedTx);
       }
@@ -160,20 +159,28 @@ const retryTransactionTracker = async (
   wallet: any,
   transactionSignature: string
 ) => {
-  retryCount[wallet.userId] = {
-    count: retryCount[wallet.userId].count + 1,
-  };
-  const parsedTx = await connection.getParsedTransaction(transactionSignature, {
-    commitment: "confirmed",
-    maxSupportedTransactionVersion: 0,
-  });
-  if (!parsedTx || !parsedTx?.meta || !parsedTx?.meta.logMessages) {
-    if (retryCount[wallet.userId].count === 5) {
-      console.log("Invalid or unsupported transaction format");
-      return;
+  try {
+    retryCount[wallet.userId] = {
+      count: retryCount[wallet.userId].count + 1,
+    };
+    const parsedTx = await connection.getParsedTransaction(
+      transactionSignature,
+      {
+        commitment: "confirmed",
+        maxSupportedTransactionVersion: 0,
+      }
+    );
+    if (!parsedTx || !parsedTx?.meta || !parsedTx?.meta.logMessages) {
+      if (retryCount[wallet.userId].count === 3) {
+        console.log("Invalid or unsupported transaction format");
+        return;
+      }
+      await retryTransactionTracker(wallet, transactionSignature);
+    } else {
+      await feeProcessFunc(wallet, parsedTx);
     }
-    await retryTransactionTracker(wallet, transactionSignature);
-  } else {
-    await feeProcessFunc(wallet, parsedTx);
+  } catch (error) {
+    console.log("retryTransactionTracker:", error);
+    return;
   }
 };

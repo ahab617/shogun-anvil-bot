@@ -44,7 +44,7 @@ export const FeeTransferQueueUpdator = async () => {
         },
       })) as TSplTransferQueueInterface[];
 
-      console.log("SplTransferQueueUpdator running:", queues.length);
+      // console.log("SplTransferQueueUpdator running:", queues.length);
 
       if (queues.length > 0) {
         for (let i = 0; i < queues.length; i++) {

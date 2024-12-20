@@ -2,7 +2,6 @@ import { bot } from "../bot";
 import { apiSwap } from "./swap";
 import config from "../config.json";
 import swapInfoController from "../controller/swap";
-import { convertTokenAmount } from "../service/getTokenPrice";
 import { checkSolBalance, checkSplTokenBalance } from "../service/getBalance";
 
 const cron = require("node-cron");
@@ -18,12 +17,15 @@ export const startSwapProcess = async () => {
 const executeSwap = async (userList: any) => {
   const {
     amount,
+    amountToken,
     baseDecimal,
+    baseBalance,
     quoteDecimal,
     baseSymbol,
     quoteSymbol,
     baseToken,
     quoteToken,
+    quoteBalance,
     swapDetails,
     userId,
     buy,
@@ -43,7 +45,15 @@ const executeSwap = async (userList: any) => {
             swapDetails[0].publicKey
           )) as any;
           if (currentSolBalance === undefined) return;
-          if (currentSolBalance >= amount + config.networkFee) {
+          let priorityFeeValue = 0;
+          if (priorityFee === "high") {
+            priorityFeeValue = 0.01;
+          } else if (priorityFee === "medium") {
+            priorityFeeValue = 0.003;
+          } else {
+            priorityFeeValue = 0.001;
+          }
+          if (currentSolBalance >= amount + priorityFeeValue) {
             const result = await apiSwap(
               Number(amount),
               baseDecimal,
@@ -53,16 +63,8 @@ const executeSwap = async (userList: any) => {
               priorityFee
             );
             if (result?.status == 200 && result?.txId) {
-              bot.sendMessage(
-                userId,
-                `
-  You bought the token.\n 
-  Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
-  <a href="${config.solScanUrl}/${result.txId}"><i>View on Solscan</i></a>`,
-                { parse_mode: "HTML" }
-              );
               const newBuyProgress = buyProgress + 1;
-              let swapInfoUpdate = null;
+              let swapInfoUpdate = {};
               if (buy == newBuyProgress) {
                 swapInfoUpdate = {
                   userId: userId,
@@ -79,12 +81,20 @@ const executeSwap = async (userList: any) => {
                 };
               }
               await swapInfoController.updateOne(swapInfoUpdate);
+              bot.sendMessage(
+                userId,
+                `
+You bought the token.\n 
+Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
+<a href="${config.solScanUrl}/${result.txId}"><i>View on Solscan</i></a>`,
+                { parse_mode: "HTML" }
+              );
             } else {
               return;
             }
           } else {
             if (isBalance) {
-              const value = amount + config.networkFee - currentSolBalance;
+              const value = amount + priorityFeeValue - currentSolBalance;
               await inputTokenCheck(userId, baseToken, baseSymbol, value);
               const swapInfoUpdate = {
                 userId: userId,
@@ -111,16 +121,8 @@ const executeSwap = async (userList: any) => {
               priorityFee
             );
             if (result?.status == 200 && result?.txId) {
-              bot.sendMessage(
-                userId,
-                `
-  You bought the token.\n
-  Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
-  <a href="${config.solScanUrl}/${result.txId}"><i>View on Solscan</i></a>`,
-                { parse_mode: "HTML" }
-              );
               const newBuyProgress = buyProgress + 1;
-              let swapInfoUpdate = null;
+              let swapInfoUpdate = {};
               if (buy == newBuyProgress) {
                 swapInfoUpdate = {
                   userId: userId,
@@ -137,6 +139,14 @@ const executeSwap = async (userList: any) => {
                 };
               }
               await swapInfoController.updateOne(swapInfoUpdate);
+              bot.sendMessage(
+                userId,
+                `
+You bought the token.\n
+Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
+<a href="${config.solScanUrl}/${result.txId}"><i>View on Solscan</i></a>`,
+                { parse_mode: "HTML" }
+              );
             } else {
               return;
             }
@@ -160,17 +170,9 @@ const executeSwap = async (userList: any) => {
           swapDetails[0].publicKey
         )) as any;
         if (currentTokenBalance === undefined) return;
-        const amount1 = (await convertTokenAmount(
-          amount,
-          baseToken,
-          quoteToken
-        )) as any;
-
-        if (amount1 === undefined) return;
-        if (amount1 > currentTokenBalance || currentTokenBalance == 0) {
+        if (amountToken > currentTokenBalance || currentTokenBalance == 0) {
           if (isBalance) {
-            const realAmount = Math.floor(amount1);
-            const value = realAmount - currentTokenBalance;
+            const value = amountToken - currentTokenBalance;
             await inputTokenCheck(userId, quoteToken, quoteSymbol, value);
             const swapInfoUpdate = {
               userId: userId,
@@ -182,7 +184,7 @@ const executeSwap = async (userList: any) => {
           }
         } else {
           const result = await apiSwap(
-            Number(parseFloat(amount1.toString()).toFixed(4)),
+            amountToken,
             quoteDecimal,
             quoteToken,
             baseToken,
@@ -190,18 +192,8 @@ const executeSwap = async (userList: any) => {
             priorityFee
           );
           if (result?.status == 200 && result?.txId) {
-            bot.sendMessage(
-              userId,
-              `
-  You sold the token.
-  Reverse swap for ${Number(
-    parseFloat(amount1.toString()).toFixed(4)
-  )} ${quoteSymbol} -> ${baseSymbol}
-  <a href="${config.solScanUrl}/${result.txId}">View on Solscan</a>`,
-              { parse_mode: "HTML" }
-            );
             const newSellProgress = sellProgress + 1;
-            let swapInfoUpdate = null;
+            let swapInfoUpdate = {};
             if (sell == newSellProgress) {
               swapInfoUpdate = {
                 userId: userId,
@@ -218,6 +210,14 @@ const executeSwap = async (userList: any) => {
               };
             }
             await swapInfoController.updateOne(swapInfoUpdate);
+            bot.sendMessage(
+              userId,
+              `
+  You sold the token.
+  Reverse swap for ${Number(amountToken)} ${quoteSymbol} -> ${baseSymbol}
+  <a href="${config.solScanUrl}/${result.txId}">View on Solscan</a>`,
+              { parse_mode: "HTML" }
+            );
           } else {
             return;
           }
@@ -231,25 +231,30 @@ const executeSwap = async (userList: any) => {
           swapDetails[0].publicKey
         )) as any;
         if (currentSolBalance === undefined) return;
-        if (currentSolBalance <= (amount + config.networkFee) * buy) {
+        let priorityFeeValue = 0;
+        if (priorityFee === "high") {
+          priorityFeeValue = 0.01;
+        } else if (priorityFee === "medium") {
+          priorityFeeValue = 0.003;
+        } else {
+          priorityFeeValue = 0.001;
+        }
+        if (
+          currentSolBalance <=
+          (amount + priorityFeeValue) * (buy - buyProgress) + priorityFeeValue
+        ) {
           const currentTokenBalance = (await checkSplTokenBalance(
             quoteToken,
             swapDetails[0].publicKey
           )) as any;
           if (currentTokenBalance === undefined) return;
-          const amount1 = (await convertTokenAmount(
-            amount,
-            baseToken,
-            quoteToken
-          )) as any;
-          if (amount1 === undefined) return;
-          if (currentTokenBalance < amount1 * buy) {
+          if (currentTokenBalance < amountToken * buy) {
             if (isBalance) {
               const value = Number(
                 parseFloat(
                   (
-                    (amount + config.networkFee) * buy -
-                    currentSolBalance
+                    (amount + priorityFeeValue) * (buy - buyProgress) +
+                    priorityFeeValue
                   ).toString()
                 ).toFixed(4)
               );
@@ -259,6 +264,7 @@ const executeSwap = async (userList: any) => {
                 isBalance: false,
               };
               await swapInfoController.updateOne(swapInfoUpdate);
+              isSolStatusFunc(userId, false);
             } else {
               return;
             }
@@ -287,24 +293,30 @@ const executeSwap = async (userList: any) => {
           swapDetails[0].publicKey
         )) as any;
         if (currentTokenBalance === undefined) return;
-        const amount1 = (await convertTokenAmount(
-          amount,
-          baseToken,
-          quoteToken
-        )) as any;
-        if (amount1 === undefined) return;
-        if (currentTokenBalance < amount1 * sell) {
+        if (currentTokenBalance < amountToken * sell) {
           const currentSolBalance = (await checkSolBalance(
             swapDetails[0].publicKey
           )) as any;
           if (currentSolBalance === undefined) return;
-          if (currentSolBalance < (amount + config.networkFee) * sell) {
+          let priorityFeeValue = 0;
+          if (priorityFee === "high") {
+            priorityFeeValue = 0.01;
+          } else if (priorityFee === "medium") {
+            priorityFeeValue = 0.003;
+          } else {
+            priorityFeeValue = 0.001;
+          }
+          if (
+            currentSolBalance <=
+            (amount + priorityFeeValue) * (sell - sellProgress) +
+              priorityFeeValue
+          ) {
             if (isBalance) {
               const value = Number(
                 parseFloat(
                   (
-                    (amount + config.networkFee) * buy -
-                    currentSolBalance
+                    (amount + priorityFeeValue) * buy +
+                    priorityFeeValue
                   ).toString()
                 ).toFixed(4)
               );
@@ -314,11 +326,11 @@ const executeSwap = async (userList: any) => {
                 isBalance: false,
               };
               await swapInfoController.updateOne(swapInfoUpdate);
+              isSolStatusFunc(userId, false);
             } else {
               return;
             }
           } else {
-            isSolStatusFunc(userId, true);
             const swapInfoUpdate = {
               userId: userId,
               sellProgress: 0,
@@ -329,6 +341,7 @@ const executeSwap = async (userList: any) => {
               isBalance: true,
             };
             await swapInfoController.updateOne(swapInfoUpdate);
+            isSolStatusFunc(userId, true);
             return;
           }
         } else {
@@ -357,7 +370,8 @@ const executeSwap = async (userList: any) => {
           }
         }
       }
-      if (isSolStatus[userId]?.isSol && buyProgress < buy && flag) {
+      if (isSolStatus[userId]?.isSol && flag && buyProgress < buy) {
+        console.log("buy swap start!");
         const result = await apiSwap(
           Number(amount),
           baseDecimal,
@@ -367,19 +381,10 @@ const executeSwap = async (userList: any) => {
           priorityFee
         );
         if (result?.status == 200 && result?.txId) {
-          bot.sendMessage(
-            userId,
-            `
-  You bought the token.\n 
-  Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
-  <a href="${config.solScanUrl}/${result.txId}"><i>View on Solscan</i></a>`,
-            { parse_mode: "HTML" }
-          );
-
+          console.log("buy success!");
           const newBuyProgress = buyProgress + 1;
-          let swapInfoUpdate = null;
+          let swapInfoUpdate = {};
           if (buy == newBuyProgress) {
-            isSolStatusFunc(userId, false);
             isSplTokenStatusFunc(userId, false);
             swapInfoUpdate = {
               userId: userId,
@@ -396,6 +401,14 @@ const executeSwap = async (userList: any) => {
             };
           }
           await swapInfoController.updateOne(swapInfoUpdate);
+          bot.sendMessage(
+            userId,
+            `
+  You bought the token.\n 
+  Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
+  <a href="${config.solScanUrl}/${result.txId}"><i>View on Solscan</i></a>`,
+            { parse_mode: "HTML" }
+          );
         } else {
           return;
         }
@@ -404,14 +417,9 @@ const executeSwap = async (userList: any) => {
         sellProgress < sell &&
         !flag
       ) {
-        const amount1 = (await convertTokenAmount(
-          amount,
-          baseToken,
-          quoteToken
-        )) as any;
-        if (amount1 === undefined) return;
+        console.log("sell swap start!");
         const result = await apiSwap(
-          Number(parseFloat(amount1.toString()).toFixed(4)),
+          amountToken,
           quoteDecimal,
           quoteToken,
           baseToken,
@@ -419,21 +427,12 @@ const executeSwap = async (userList: any) => {
           priorityFee
         );
         if (result?.status == 200 && result?.txId) {
-          bot.sendMessage(
-            userId,
-            `
-  You sold the token.
-  Reverse swap for ${Number(
-    parseFloat(amount1.toString()).toFixed(4)
-  )} ${quoteSymbol} -> ${baseSymbol}
-  <a href="${config.solScanUrl}/${result.txId}">View on Solscan</a>`,
-            { parse_mode: "HTML" }
-          );
+          console.log("sell success!");
+
           const newSellProgress = sellProgress + 1;
-          let swapInfoUpdate = null;
+          let swapInfoUpdate = {};
           if (sell == newSellProgress) {
             isSolStatusFunc(userId, false);
-            isSplTokenStatusFunc(userId, false);
             swapInfoUpdate = {
               userId: userId,
               sellProgress: 0,
@@ -449,6 +448,14 @@ const executeSwap = async (userList: any) => {
             };
           }
           await swapInfoController.updateOne(swapInfoUpdate);
+          bot.sendMessage(
+            userId,
+            `
+You sold the token.
+Reverse swap for ${Number(amountToken)} ${quoteSymbol} -> ${baseSymbol}
+<a href="${config.solScanUrl}/${result.txId}">View on Solscan</a>`,
+            { parse_mode: "HTML" }
+          );
         } else {
           return;
         }
@@ -472,11 +479,12 @@ const isSplTokenStatusFunc = (userId: number, flag: boolean) => {
 };
 const processSwap = async (interval: number) => {
   try {
-    if (timeAmount > 1440) {
+    if (timeAmount > 360) {
       timeAmount = 0;
     }
 
     timeAmount += interval;
+    console.log(timeAmount);
     const swapInfo = await swapInfoController.swapInfo();
     if (swapInfo?.data.length > 0) {
       for (let i = 0; i < swapInfo.data.length; i++) {

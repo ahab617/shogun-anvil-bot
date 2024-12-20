@@ -37,43 +37,13 @@ export const withdrawService = async (withInfo: any) => {
       );
       return result;
     } else {
-      const r = await transferSplToken(
+      const result = await transferSplToken(
         privatekey,
         withInfo.token,
         withInfo.withdrawAddress,
         withInfo.amount
       );
-      if (r) {
-        bot.sendMessage(
-          withInfo.userId,
-          `
-    <b>Please check this.</b>
-    <a href="${config.solScanUrl}/${r}"><i>View on Solscan</i></a>`,
-          {
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "Return  👈", callback_data: "return" }],
-              ],
-            },
-          }
-        );
-
-        await withdrawController.create(withInfo);
-      } else {
-        bot.sendMessage(
-          withInfo.userId,
-          `Please try again later due to network overload`,
-          {
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "Return  👈", callback_data: "return" }],
-              ],
-            },
-          }
-        );
-      }
+      return result;
     }
   } catch (error) {
     console.log("withdrawServiceError: ", error);
@@ -131,7 +101,6 @@ export const sendSol = async (
     ]);
     return { result: tx, msg: `` };
   } catch (err: any) {
-    console.log(err);
     return {
       result: null,
       msg: `Please try again later due to network overload`,
@@ -184,6 +153,7 @@ const transferSplToken = async (
   amount: number
 ) => {
   try {
+    console.log(privatekey, tokenAddr, dis, amount);
     const fromWallet = (await getKeyPairFromPrivatekey(privatekey)) as any;
     const destPublicKey = new PublicKey(dis);
     const mintPublicKey = new PublicKey(tokenAddr);
@@ -195,14 +165,14 @@ const transferSplToken = async (
       mintPublicKey,
       fromWallet.publicKey
     );
-
+    console.log("senderTokenAccount:", senderTokenAccount);
     const receiverTokenAccount = await getOrCreateAssociatedTokenAccount(
       connection,
       fromWallet,
       mintPublicKey,
       destPublicKey
     );
-
+    console.log("receiverTokenAccount: ", receiverTokenAccount);
     const tx = await transfer(
       connection,
       fromWallet,
@@ -211,9 +181,10 @@ const transferSplToken = async (
       fromWallet.publicKey,
       amount * 10 ** decimals
     );
-    return tx;
+    return { result: tx, msg: `` };
   } catch (error) {
     console.log("transferSplTokenError: ", error);
+    return { result: null, msg: `` };
   }
 };
 

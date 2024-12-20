@@ -15,6 +15,7 @@ import {
   swapStopHandler,
   swapActiveHandler,
   dirConfirm,
+  tradeTimeSetting,
 } from "../library/swapHandler";
 import {
   deleteWallethandler,
@@ -62,6 +63,8 @@ export const callBackHandler = async (msg: any, action: string | any) => {
         swapActiveHandler(msg);
       } else if (action.startsWith("direction_")) {
         dirConfirm(msg, action);
+      } else if (action.startsWith("trade_")) {
+        tradeTimeSetting(msg, action);
       }
       break;
     }

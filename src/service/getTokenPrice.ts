@@ -1,5 +1,6 @@
 import axios from "axios";
 import config from "../config.json";
+import { subBalance } from "../bot/library";
 
 const getTokenPrice = async (
   sourceToken: string,
@@ -41,14 +42,35 @@ export const convertTokenAmount = async (
   sourceAmount: number,
   sourceToken: string,
   targetToken: string
-): Promise<number | null> => {
+) => {
+  try {
+    const price = await getTokenPrice(sourceToken, targetToken);
+    if (price === null) {
+      await retryConvertTokenAmount(sourceAmount, sourceToken, targetToken);
+    } else {
+      const targetAmount = sourceAmount / price;
+      const splTokenAmount = await subBalance(targetAmount);
+      return Number(splTokenAmount);
+    }
+  } catch (error) {
+    return null;
+  }
+};
+
+const retryConvertTokenAmount = async (
+  sourceAmount: number,
+  sourceToken: string,
+  targetToken: string
+) => {
   try {
     const price = await getTokenPrice(sourceToken, targetToken);
     if (price === null) {
       return null;
+    } else {
+      const targetAmount = sourceAmount / price;
+      const splTokenAmount = await subBalance(targetAmount);
+      return Number(splTokenAmount);
     }
-    const targetAmount = sourceAmount / price;
-    return Number(targetAmount);
   } catch (error) {
     return null;
   }

@@ -1,13 +1,17 @@
+import axios from "axios";
 import { bot } from "../index";
 import config from "../../config.json";
-import { PublicKey, Connection, clusterApiUrl } from "@solana/web3.js";
-import { checkSolBalance } from "../../service/getBalance";
-import { estimateSOLTransferFee, withdrawService } from "../../service";
+import { PublicKey } from "@solana/web3.js";
+import {
+  checkSolBalance,
+  checkSplTokenBalance,
+} from "../../service/getBalance";
 import walletController from "../../controller/wallet";
-import { removeAnswerCallback, subBalance } from "./index";
-import tokenSetting from "../../controller/tokenSetting";
+import swapInfoController from "../../controller/swap";
 import { getWalletTokenBalances } from "../../service";
-import axios from "axios";
+import { removeAnswerCallback, subBalance } from "./index";
+import withdrawController from "../../controller/withdraw";
+import { estimateSOLTransferFee, withdrawService } from "../../service";
 
 interface TwithdrawInfo {
   userId: number;
@@ -27,6 +31,7 @@ let tokenAccount = {} as any;
 let balanceAmount = {} as any;
 let withdrawInfo = {} as any;
 let withdrawAddress = {} as any;
+let swapInfoUpdate = {} as any;
 export const withdrawHandler = async (msg: any) => {
   try {
     removeAnswerCallback(msg.chat);
@@ -37,29 +42,24 @@ export const withdrawHandler = async (msg: any) => {
     });
 
     if (user) {
-      const tokenInfo = await tokenSetting.findOne({
-        filter: { userId: msg.chat.id },
-      });
-
       try {
         let newArray = [];
         let newBalance = [];
         const solBalance = await checkSolBalance(user.publicKey);
-        if (solBalance === undefined) {
+        if (solBalance === undefined || solBalance === null) {
           bot.sendMessage(
             msg.chat.id,
             `It failed to get balance due to network overload. Please try again later.`
           );
           return;
         } else if (solBalance > 0) {
-          const r = await subBalance(solBalance);
           newBalance.push({
             token: config.solTokenAddress,
-            balance: Number(r),
+            balance: Number(solBalance),
           });
           newArray.unshift([
             {
-              text: `SOL  (${r})`,
+              text: `SOL  (${solBalance})`,
               callback_data: `applyToken_${config.solTokenAddress}`,
             },
           ]);
@@ -449,6 +449,11 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
 };
 export const applyWithdrawHandler = async (msg: any) => {
   try {
+    const user = await walletController.findOne({
+      filter: {
+        userId: msg.chat.id,
+      },
+    });
     if (
       ![
         "/cancel",
@@ -481,6 +486,51 @@ export const applyWithdrawHandler = async (msg: any) => {
             ],
           },
         });
+      }
+    } else {
+      if (result?.result) {
+        bot.sendMessage(
+          msg.chat.id,
+          `
+<b>Please check this.</b>
+<a href="${config.solScanUrl}/${result?.result}"><i>View on Solscan</i></a>`,
+          {
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "Return  👈", callback_data: "return" }],
+              ],
+            },
+          }
+        );
+        await withdrawController.create(withdrawInfo[msg.chat.id]);
+        const tokenBalance = (await checkSplTokenBalance(
+          withdrawInfo[msg.chat.id].token,
+          user.publicKey
+        )) as any;
+        if (tokenBalance === undefined || tokenBalance === null) {
+          await splTokenBalanceCheck(msg, user);
+        } else {
+          const _tokenBalance = await subBalance(tokenBalance);
+          swapInfoUpdate[msg.chat.id] = {
+            userId: msg.chat.id,
+            quoteBalance: _tokenBalance,
+          };
+          await swapInfoController.updateOne(swapInfoUpdate);
+        }
+      } else {
+        bot.sendMessage(
+          msg.chat.id,
+          `Please try again later due to network overload`,
+          {
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "Return  👈", callback_data: "return" }],
+              ],
+            },
+          }
+        );
       }
     }
   } catch (error) {
@@ -711,5 +761,22 @@ const promptForWithdraw = async (
       });
   } catch (error) {
     console.log("promptForWithdrawError: ", error);
+  }
+};
+
+const splTokenBalanceCheck = async (msg: any, wallet: any) => {
+  const tokenBalance = (await checkSplTokenBalance(
+    withdrawInfo[msg.chat.id].token,
+    wallet.publicKey
+  )) as any;
+  if (tokenBalance === undefined || tokenBalance === null) {
+    await splTokenBalanceCheck(msg, wallet);
+  } else {
+    const _tokenBalance = await subBalance(tokenBalance);
+    swapInfoUpdate[msg.chat.id] = {
+      userId: msg.chat.id,
+      quoteBalance: _tokenBalance,
+    };
+    await swapInfoController.updateOne(swapInfoUpdate);
   }
 };

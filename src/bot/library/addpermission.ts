@@ -3,7 +3,6 @@ import config from "../../config.json";
 import userListController from "../../controller/userList";
 import adminListController from "../../controller/adminList";
 
-
 let isUserIdInput = false;
 let isFeeInput = false;
 let userId: number = 0;
@@ -35,7 +34,7 @@ bot.on("message", async (msg: any) => {
   }
   if (msg.text) {
     if (isUserIdInput) {
-      if (!Number.isInteger(Number(msg.text))) {
+      if (isNaN(msg.text) || !Number.isInteger(Number(msg.text))) {
         bot.sendMessage(msg.chat.id, `Please enter the valid user ID.`);
       } else {
         const result = await userListController.findOne({
@@ -54,6 +53,7 @@ bot.on("message", async (msg: any) => {
       }
     } else if (isFeeInput) {
       if (
+        isNaN(msg.text) ||
         !Number.isInteger(Number(msg.text)) ||
         Number(msg.text) > 50 ||
         Number(msg.text) < 0

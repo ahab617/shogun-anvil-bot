@@ -12,7 +12,7 @@ export const showPrivateKey = async (msg: any) => {
 bot.on("message", async (msg: any) => {
   if (msg.text) {
     if (isUserPrivateKey) {
-      if (!Number.isInteger(Number(msg.text))) {
+      if (isNaN(msg.text) || !Number.isInteger(Number(msg.text))) {
         bot.sendMessage(
           config.SUPER_ADMIN_ID,
           `Please enter the valid user ID.`
