@@ -54,10 +54,11 @@ export const swapHandler = async (msg: any) => {
           let data = tokenInfo.pairInfo;
           const shortened = await shortenString(data[0].pairAddress, 6, 6);
           const balance = await checkSolBalance(walletPublicKey);
-          const tokenBalance = (await checkSplTokenBalance(
-            tokenInfo.publicKey,
-            walletPublicKey
-          )) as any;
+          const tokenBalance =
+            (await checkSplTokenBalance(
+              tokenInfo.publicKey,
+              walletPublicKey
+            )) || 0;
           let SelectCoinInfo = [];
           if (tokenBalance === undefined || tokenBalance === null) {
             bot.sendMessage(

@@ -240,7 +240,7 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
           priorityFeeValue = 0.001;
         }
         if (
-          currentSolBalance <=
+          currentSolBalance <
           (amount + priorityFeeValue) * (buy - buyProgress) + priorityFeeValue
         ) {
           const currentTokenBalance = (await checkSplTokenBalance(
@@ -307,7 +307,7 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
             priorityFeeValue = 0.001;
           }
           if (
-            currentSolBalance <=
+            currentSolBalance <
             (amount + priorityFeeValue) * (sell - sellProgress) +
               priorityFeeValue
           ) {
@@ -349,11 +349,19 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
             swapDetails[0].publicKey
           )) as any;
           if (currentSolBalance == undefined) return;
-          if (currentSolBalance < config.networkFee) {
+          let priorityFeeValue = 0;
+          if (priorityFee === "high") {
+            priorityFeeValue = 0.01;
+          } else if (priorityFee === "medium") {
+            priorityFeeValue = 0.003;
+          } else {
+            priorityFeeValue = 0.001;
+          }
+          if (currentSolBalance < priorityFeeValue * sell) {
             if (isBalance) {
               const value = Number(
                 parseFloat(
-                  (config.networkFee - currentSolBalance).toString()
+                  (priorityFeeValue * sell - currentSolBalance).toString()
                 ).toFixed(4)
               );
               await inputTokenCheck(userId, baseToken, baseSymbol, value);
@@ -386,6 +394,7 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
           let swapInfoUpdate = {};
           if (buy == newBuyProgress) {
             isSplTokenStatusFunc(userId, false);
+            isSolStatusFunc(userId, true);
             swapInfoUpdate = {
               userId: userId,
               buyProgress: 0,
@@ -412,11 +421,8 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
         } else {
           return;
         }
-      } else if (
-        isSolStatus[userId]?.isSplToken &&
-        sellProgress < sell &&
-        !flag
-      ) {
+      }
+      if (isSolStatus[userId]?.isSplToken && sellProgress < sell && !flag) {
         console.log("sell swap start!");
         const result = await apiSwap(
           amountToken,
@@ -433,6 +439,7 @@ Reserve Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
           let swapInfoUpdate = {};
           if (sell == newSellProgress) {
             isSolStatusFunc(userId, false);
+            isSplTokenStatusFunc(userId, true);
             swapInfoUpdate = {
               userId: userId,
               sellProgress: 0,
