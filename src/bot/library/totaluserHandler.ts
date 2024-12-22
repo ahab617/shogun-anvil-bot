@@ -43,7 +43,7 @@ export const totaluserHandler = async (msg: any) => {
     bot.sendMessage(msg.chat.id, `User don't exist.`);
   }
   if (user.length > 0) {
-    user.forEach((item: any, idx: number) => {
+    user.map((item: any, idx: number) => {
       newText +=
         `UserID: ${item?.userId}\n` +
         `Native Symbol: ${item?.Native_symbol}\n` +

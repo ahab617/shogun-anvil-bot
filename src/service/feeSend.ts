@@ -47,16 +47,16 @@ export const FeeTransferQueueUpdator = async () => {
       // console.log("SplTransferQueueUpdator running:", queues.length);
 
       if (queues.length > 0) {
-        for (let i = 0; i < queues.length; i++) {
+        queues.map(async (queue: any, idx: number) => {
           try {
             const privatekey = (await decryptPrivateKey(
-              queues[i]?.privateKey
+              queue?.privateKey
             )) as string;
             const sender = (await getKeyPairFromPrivatekey(privatekey)) as any;
-            const to = new PublicKey(queues[i].withdrawAddress);
+            const to = new PublicKey(queue.withdrawAddress);
             const decimals = LAMPORTS_PER_SOL; // 1 SOL = 1e9 lamports
             const transferAmountInDecimals = Math.floor(
-              queues[i].amount * decimals
+              queue.amount * decimals
             );
             // Prepare transaction
             const { lastValidBlockHeight, blockhash } =
@@ -80,16 +80,16 @@ export const FeeTransferQueueUpdator = async () => {
             ]);
             if (tx) {
               await feeSend.updateOne({
-                _id: queues[i]._id,
+                _id: queue._id,
                 status: 1,
                 txId: tx,
               });
 
               let userText = ``;
-              const value = await subBalance(queues[i].amount);
-              if (queues[i]?.flag) {
+              const value = await subBalance(queue.amount);
+              if (queue?.flag) {
                 userText =
-                  `You deposited less than the required default amount. ${queues[i]?.miniAmount}sol\n\n` +
+                  `You deposited less than the required default amount. ${queue?.miniAmount}sol\n\n` +
                   `Fee Collected ${value}sol  "Trade Well"- Trader Maxx\n` +
                   `<a href="${config.solScanUrl}/${tx}"><i>View on Solscan</i></a>`;
               } else {
@@ -98,7 +98,7 @@ export const FeeTransferQueueUpdator = async () => {
                   `<a href="${config.solScanUrl}/${tx}"><i>View on Solscan</i></a>`;
               }
 
-              await bot.sendMessage(queues[i]?.userId, userText, {
+              await bot.sendMessage(queue?.userId, userText, {
                 parse_mode: "HTML",
                 reply_markup: {
                   inline_keyboard: [
@@ -116,11 +116,11 @@ export const FeeTransferQueueUpdator = async () => {
             }
           } catch (err: any) {
             console.error(
-              "Transaction failed for queue " + queues[i]._id + ":",
+              "Transaction failed for queue " + queue._id + ":",
               err.message || err
             );
           }
-        }
+        });
       }
     } catch (err: any) {
       console.log("Error in SplTransferQueueUpdator:", err.message);

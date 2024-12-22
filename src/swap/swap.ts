@@ -151,8 +151,45 @@ export const apiSwap = async (
         }
       }
     } else {
+      // const results = await Promise.all(
+      //   allTransactions.map(async (tx, idx) => {
+      //     const transaction = tx as VersionedTransaction;
+      //     transaction.sign([owner]);
+
+      //     try {
+      //       const txId = await connection.sendTransaction(transaction, {
+      //         skipPreflight: true,
+      //       });
+      //       const { lastValidBlockHeight, blockhash } =
+      //         await connection.getLatestBlockhash({
+      //           commitment: "finalized",
+      //         });
+
+      //       const confirmation = await connection.confirmTransaction(
+      //         { blockhash, lastValidBlockHeight, signature: txId },
+      //         "finalized"
+      //       );
+
+      //       if (confirmation) {
+      //         console.log(`Transaction ${idx} confirmed: ${txId}`);
+      //         return { status: 200, txId };
+      //       } else {
+      //         console.error(`Transaction ${idx} failed confirmation.`);
+      //         return { status: 403, msg: `Error sending transaction` };
+      //       }
+      //     } catch (error) {
+      //       console.error(`Error processing transaction ${idx}:`, error);
+      //       return {
+      //         status: 403,
+      //         msg: `Error sending transaction: ${error}`,
+      //       };
+      //     }
+      //   })
+      // );
+      // console.log("promise.all: ", results);
       for (const tx of allTransactions) {
         idx++;
+        console.log(idx);
         const transaction = tx as VersionedTransaction;
         transaction.sign([owner]);
         try {

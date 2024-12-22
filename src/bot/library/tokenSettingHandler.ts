@@ -196,6 +196,7 @@ const isValidSolanaToken = async (tokenAddress: string | any, msg: any) => {
       );
       const decimal = info?.value?.data?.parsed?.info?.decimals;
       let pairInfo = [];
+
       for (let i = 0; i < data.length; i++) {
         if (
           data[i].dexId === "raydium" &&

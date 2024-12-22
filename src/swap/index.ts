@@ -84,9 +84,11 @@ const executeSwap = async (userList: any) => {
               bot.sendMessage(
                 userId,
                 `
-You bought the token.\n 
-Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
-<a href="${config.solScanUrl}/${result.txId}"><i>View on Solscan</i></a>`,
+            You bought the token.\n
+            Swap for ${Number(amount)} ${baseSymbol} -> ${quoteSymbol}
+            <a href="${config.solScanUrl}/${
+                  result.txId
+                }"><i>View on Solscan</i></a>`,
                 { parse_mode: "HTML" }
               );
             } else {
@@ -494,14 +496,11 @@ const processSwap = async (interval: number) => {
     console.log(timeAmount);
     const swapInfo = await swapInfoController.swapInfo();
     if (swapInfo?.data.length > 0) {
-      for (let i = 0; i < swapInfo.data.length; i++) {
-        if (
-          swapInfo.data[i].active &&
-          timeAmount % swapInfo.data[i].loopTime == 0
-        ) {
-          await executeSwap(swapInfo.data[i]);
+      swapInfo?.data.map((item: any, idx: number) => {
+        if (item.active && timeAmount % item.loopTime == 0) {
+          executeSwap(item);
         }
-      }
+      });
     } else {
       return;
     }
