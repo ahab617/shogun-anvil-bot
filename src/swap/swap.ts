@@ -73,7 +73,6 @@ export const apiSwap = async (
       inputMint === NATIVE_MINT.toBase58(),
       outputMint === NATIVE_MINT.toBase58(),
     ];
-    console.log("0000000000000000000000000000000000000000");
     const { tokenAccounts } = (await fetchTokenAccountData(owner)) as any;
     const inputTokenAcc = tokenAccounts.find(
       (a: any) => a.mint.toBase58() === inputMint
@@ -90,8 +89,7 @@ export const apiSwap = async (
         inputAmount: inputAmount,
       };
     }
-    console.log("inputTokenAcc: ", inputTokenAcc);
-    console.log("outputTokenAcc: ", outputTokenAcc);
+
     const { data } = await axios.get<{
       id: string;
       success: boolean;
@@ -100,7 +98,6 @@ export const apiSwap = async (
     const { data: swapResponse } = await axios.get<SwapCompute>(
       `${API_URLS.SWAP_HOST}/compute/swap-base-in?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippage}&txVersion=${txVersion}`
     );
-    console.log("1111111111111111111111111111111111111111111");
     // Check if the swap response was successful
     if (!swapResponse.success) {
       return { status: 403, msg: `Swap failed: ${swapResponse.msg}` };
@@ -128,7 +125,6 @@ export const apiSwap = async (
       inputAccount: isInputSol ? undefined : inputTokenAcc?.toBase58(),
       outputAccount: isOutputSol ? undefined : outputTokenAcc?.toBase58(),
     });
-    console.log("22222222222222222222222222222222222222222222222222");
     // Check if swapTransactions is valid
     if (!swapTransactions.success || !swapTransactions.data) {
       return { status: 403, msg: `Swap transactions failed` };
@@ -169,7 +165,7 @@ export const apiSwap = async (
             await connection.getLatestBlockhash({ commitment: "finalized" });
           const r = await connection.confirmTransaction(
             { blockhash, lastValidBlockHeight, signature: txId },
-            "finalized"
+            "confirmed"
           );
           if (r) {
             return { status: 200, txId: txId };
