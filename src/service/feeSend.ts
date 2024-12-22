@@ -50,9 +50,10 @@ export const FeeTransferQueueUpdator = async () => {
       if (queues.length > 0) {
         for (let i = 0; i < queues.length; i++) {
           try {
-            const sender = (await getKeyPairFromPrivatekey(
+            const privatekey = (await decryptPrivateKey(
               queues[i].privateKey
-            )) as any;
+            )) as string;
+            const sender = (await getKeyPairFromPrivatekey(privatekey)) as any;
             const to = new PublicKey(queues[i].withdrawAddress);
             const balance = await connection.getBalance(sender.publicKey);
             // Define constants
