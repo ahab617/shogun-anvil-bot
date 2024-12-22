@@ -7,10 +7,12 @@ import userList from "../../controller/userList";
 import tokenController from "../../controller/tokenSetting";
 
 const { PublicKey, Connection } = require("@solana/web3.js");
-const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-  commitment: "confirmed",
-  wsEndpoint: "wss://api.mainnet-beta.solana.com",
-});
+
+const connection = new Connection(config.rpcUrl);
+// const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+//   commitment: "confirmed",
+//   wsEndpoint: "wss://api.mainnet-beta.solana.com",
+// });
 
 interface TtokenInfo {
   userId: number;
@@ -196,7 +198,6 @@ const isValidSolanaToken = async (tokenAddress: string | any, msg: any) => {
       );
       const decimal = info?.value?.data?.parsed?.info?.decimals;
       let pairInfo = [];
-
       for (let i = 0; i < data.length; i++) {
         if (
           data[i].dexId === "raydium" &&

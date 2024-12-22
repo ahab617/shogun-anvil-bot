@@ -3,10 +3,11 @@ import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { TxVersion, parseTokenAccountResp } from "@raydium-io/raydium-sdk-v2";
 import config from "../config.json";
 
-const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-  commitment: "confirmed",
-  wsEndpoint: "wss://api.mainnet-beta.solana.com",
-});
+const connection = new Connection(config.rpcUrl);
+// const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+//   commitment: "confirmed",
+//   wsEndpoint: "wss://api.mainnet-beta.solana.com",
+// });
 export const txVersion = TxVersion.V0; // or TxVersion.LEGACY
 
 export const fetchTokenAccountData = async (owner: Keypair) => {

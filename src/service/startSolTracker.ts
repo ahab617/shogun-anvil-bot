@@ -7,11 +7,11 @@ import { Connection, clusterApiUrl } from "@solana/web3.js";
 import adminSetting from "../controller/adminSetting";
 import userList from "../controller/userList";
 const { SolWalletTracker } = require("../service/solWalletTracket");
-
-const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-  commitment: "confirmed",
-  wsEndpoint: "wss://api.mainnet-beta.solana.com",
-});
+const connection = new Connection(config.rpcUrl);
+// const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+//   commitment: "confirmed",
+//   wsEndpoint: "wss://api.mainnet-beta.solana.com",
+// });
 
 let retryCount = {} as any;
 
@@ -55,7 +55,7 @@ export const startSolTracker = async () => {
       }
     };
     if (userWalletInfo.length > 0) {
-      userWalletInfo.map((wallet: any, idx: number) => {
+      userWalletInfo.forEach((wallet: any, idx: number) => {
         tracker.addWallet(wallet, depositSolCallback);
       });
     }
@@ -95,64 +95,60 @@ const feeProcessFunc = async (wallet: any, transactionDetails: any) => {
     const result = await adminSetting.find();
     const userData = await userList.findOne({ userId: wallet.userId });
     const depositData = result?.result as Array<TdepositData>;
-    if (!tx || !tx?.meta || !tx?.meta.logMessages) {
-    } else {
-      tx.transaction.message.instructions.map(
-        async (instruction: any, idx: number) => {
-          if (
-            instruction.programId.toString() ===
-            "11111111111111111111111111111111"
-          ) {
-            const parsed = instruction?.parsed as any;
+    for (const instruction of tx.transaction.message.instructions) {
+      if (
+        instruction.programId.toString() === "11111111111111111111111111111111"
+      ) {
+        const parsed = instruction?.parsed as any;
+        if (
+          (parsed?.type === "transfer" && parsed?.info) ||
+          (parsed?.type === "transferChecked" && parsed?.info)
+        ) {
+          const InputAmount = await subBalance(parsed?.info.lamports / 1e9);
+          const receiverAddress = parsed?.info.destination;
+          if (receiverAddress === wallet.publicKey) {
             if (
-              (parsed?.type === "transfer" && parsed?.info) ||
-              (parsed?.type === "transferChecked" && parsed?.info)
+              userData?.fee > 0 &&
+              depositData[0].miniAmount <= InputAmount &&
+              InputAmount > 0
             ) {
-              const InputAmount = await subBalance(parsed?.info.lamports / 1e9);
-              const receiverAddress = parsed?.info.destination;
-              if (receiverAddress === wallet.publicKey) {
-                if (
-                  userData?.fee > 0 &&
-                  depositData[0].miniAmount <= InputAmount &&
-                  InputAmount > 0
-                ) {
-                  const withdrawInfo = {
-                    userId: wallet.userId,
-                    withdrawAddress: config.adminWalletAddress,
-                    token: config.solTokenAddress,
-                    amount: (InputAmount * userData?.fee) / 100,
-                    privateKey: wallet?.privateKey,
-                    miniAmount: depositData[0].miniAmount,
-                    flag: false,
-                  } as TwithdrawInfo;
-                  await feeSend.create(withdrawInfo);
-                  // return result;
-                } else if (
-                  userData?.fee > 0 &&
-                  depositData[0].miniAmount > InputAmount
-                ) {
-                  if (InputAmount > config.withdrawFee) {
-                    const realAmount = await subBalance(
-                      InputAmount - config.withdrawFee
-                    );
-                    let withdrawInfo = {
-                      userId: wallet.userId,
-                      withdrawAddress: config.adminWalletAddress,
-                      token: config.solTokenAddress,
-                      amount: realAmount,
-                      privateKey: wallet?.privateKey,
-                      miniAmount: depositData[0].miniAmount,
-                      flag: true,
-                    } as TwithdrawInfo;
+              const withdrawInfo = {
+                userId: wallet.userId,
+                withdrawAddress: config.adminWalletAddress,
+                token: config.solTokenAddress,
+                amount: (InputAmount * userData?.fee) / 100,
+                privateKey: wallet?.privateKey,
+                miniAmount: depositData[0].miniAmount,
+                flag: false,
+              } as TwithdrawInfo;
+              await feeSend.create(withdrawInfo);
+              // return result;
+            } else if (
+              userData?.fee > 0 &&
+              depositData[0].miniAmount > InputAmount
+            ) {
+              if (InputAmount > config.withdrawFee) {
+                const realAmount = await subBalance(
+                  InputAmount - config.withdrawFee
+                );
+                let withdrawInfo = {
+                  userId: wallet.userId,
+                  withdrawAddress: config.adminWalletAddress,
+                  token: config.solTokenAddress,
+                  amount: realAmount,
+                  privateKey: wallet?.privateKey,
+                  miniAmount: depositData[0].miniAmount,
+                  flag: true,
+                } as TwithdrawInfo;
 
-                    await feeSend.create(withdrawInfo);
-                  }
-                }
+                await feeSend.create(withdrawInfo);
               }
             }
+          } else {
+            continue;
           }
         }
-      );
+      }
     }
   } catch (error) {
     console.log("feeProcessFunc: ", error);

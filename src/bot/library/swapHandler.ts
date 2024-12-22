@@ -12,10 +12,11 @@ import { convertTokenAmount } from "../../service/getTokenPrice";
 import tokenSettingController from "../../controller/tokenSetting";
 
 const { PublicKey, Connection } = require("@solana/web3.js");
-const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-  commitment: "confirmed",
-  wsEndpoint: "wss://api.mainnet-beta.solana.com",
-});
+const connection = new Connection(config.rpcUrl);
+// const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+//   commitment: "confirmed",
+//   wsEndpoint: "wss://api.mainnet-beta.solana.com",
+// });
 
 interface TBuyAndSell {
   buyNumber: number;

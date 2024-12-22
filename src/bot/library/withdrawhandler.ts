@@ -765,10 +765,11 @@ const promptForWithdraw = async (
 };
 
 const splTokenBalanceCheck = async (msg: any, wallet: any) => {
-  const tokenBalance = (await checkSplTokenBalance(
-    withdrawInfo[msg.chat.id].token,
-    wallet.publicKey
-  )) as any;
+  const tokenBalance =
+    (await checkSplTokenBalance(
+      withdrawInfo[msg.chat.id].token,
+      wallet.publicKey
+    )) || 0;
   if (tokenBalance === undefined || tokenBalance === null) {
     await splTokenBalanceCheck(msg, wallet);
   } else {

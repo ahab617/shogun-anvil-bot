@@ -13,10 +13,11 @@ import config from "../config.json";
 import { getKeyPairFromPrivatekey, decryptPrivateKey, sendSol } from ".";
 import { ObjectId } from "mongoose";
 import { subBalance } from "../bot/library";
-const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-  commitment: "confirmed",
-  wsEndpoint: "wss://api.mainnet-beta.solana.com",
-});
+const connection = new Connection(config.rpcUrl);
+// const connection = new Connection(clusterApiUrl("mainnet-beta"), {
+//   commitment: "confirmed",
+//   wsEndpoint: "wss://api.mainnet-beta.solana.com",
+// });
 
 interface TSplTransferQueueInterface {
   _id: ObjectId;
@@ -47,18 +48,35 @@ export const FeeTransferQueueUpdator = async () => {
       // console.log("SplTransferQueueUpdator running:", queues.length);
 
       if (queues.length > 0) {
-        queues.map(async (queue: any, idx: number) => {
+        for (let i = 0; i < queues.length; i++) {
           try {
-            const privatekey = (await decryptPrivateKey(
-              queue?.privateKey
-            )) as string;
-            const sender = (await getKeyPairFromPrivatekey(privatekey)) as any;
-            const to = new PublicKey(queue.withdrawAddress);
-            const decimals = LAMPORTS_PER_SOL; // 1 SOL = 1e9 lamports
-            const transferAmountInDecimals = Math.floor(
-              queue.amount * decimals
+            const sender = (await getKeyPairFromPrivatekey(
+              queues[i].privateKey
+            )) as any;
+            const to = new PublicKey(queues[i].withdrawAddress);
+            const balance = await connection.getBalance(sender.publicKey);
+            // Define constants
+            const rentExemptMin = 0.00203928 * LAMPORTS_PER_SOL; // Rent-exempt minimum in lamports
+            const transactionFee = 5000; // Approximate transaction fee in lamports
+
+            // Calculate maximum withdrawable amount
+            const maxWithdrawableLamports =
+              balance - rentExemptMin - transactionFee;
+
+            if (maxWithdrawableLamports <= 0) {
+              console.log(
+                "Insufficient balance to cover transaction fees or rent-exempt minimum."
+              );
+              return {
+                result: null,
+                msg: "Insufficient balance to cover transaction fees or rent-exempt minimum.",
+              };
+            }
+            // Compare requested amount with maximum withdrawable amount
+            const lamportsToWithdraw = Math.min(
+              queues[i].amount * LAMPORTS_PER_SOL,
+              maxWithdrawableLamports
             );
-            // Prepare transaction
             const { lastValidBlockHeight, blockhash } =
               await connection.getLatestBlockhash({
                 commitment: "finalized",
@@ -72,24 +90,25 @@ export const FeeTransferQueueUpdator = async () => {
               SystemProgram.transfer({
                 fromPubkey: sender.publicKey,
                 toPubkey: to,
-                lamports: transferAmountInDecimals,
+                lamports: lamportsToWithdraw,
               })
             );
+
             const tx = await sendAndConfirmTransaction(connection, newNonceTx, [
               sender,
             ]);
             if (tx) {
               await feeSend.updateOne({
-                _id: queue._id,
+                _id: queues[i]._id,
                 status: 1,
                 txId: tx,
               });
 
               let userText = ``;
-              const value = await subBalance(queue.amount);
-              if (queue?.flag) {
+              const value = await subBalance(queues[i].amount);
+              if (queues[i]?.flag) {
                 userText =
-                  `You deposited less than the required default amount. ${queue?.miniAmount}sol\n\n` +
+                  `You deposited less than the required default amount. ${queues[i]?.miniAmount}sol\n\n` +
                   `Fee Collected ${value}sol  "Trade Well"- Trader Maxx\n` +
                   `<a href="${config.solScanUrl}/${tx}"><i>View on Solscan</i></a>`;
               } else {
@@ -98,7 +117,7 @@ export const FeeTransferQueueUpdator = async () => {
                   `<a href="${config.solScanUrl}/${tx}"><i>View on Solscan</i></a>`;
               }
 
-              await bot.sendMessage(queue?.userId, userText, {
+              await bot.sendMessage(queues[i]?.userId, userText, {
                 parse_mode: "HTML",
                 reply_markup: {
                   inline_keyboard: [
@@ -116,11 +135,11 @@ export const FeeTransferQueueUpdator = async () => {
             }
           } catch (err: any) {
             console.error(
-              "Transaction failed for queue " + queue._id + ":",
+              "Transaction failed for queue " + queues[i]._id + ":",
               err.message || err
             );
           }
-        });
+        }
       }
     } catch (err: any) {
       console.log("Error in SplTransferQueueUpdator:", err.message);
