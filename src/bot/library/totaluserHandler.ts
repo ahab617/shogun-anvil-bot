@@ -22,14 +22,12 @@ export const totaluserHandler = async (msg: any) => {
             userId: userItem.userId,
             Native_symbol: token[0].symbol,
             Native_coin: token[0].publicKey,
-            fee: userItem.fee,
           };
         } else {
           return {
             userId: userItem.userId,
             Native_symbol: null,
             Native_coin: null,
-            fee: userItem.fee,
           };
         }
       });
@@ -44,8 +42,7 @@ export const totaluserHandler = async (msg: any) => {
       newText +=
         `UserID: ${item?.userId}\n` +
         `Native Symbol: ${item?.Native_symbol}\n` +
-        `Native Address: <code>${item?.Native_coin}</code>\n` +
-        `Fee Setting: ${item?.fee} %\n\n`;
+        `Native Address: <code>${item?.Native_coin}</code>\n`;
     });
   }
   bot.sendMessage(msg.chat.id, newText, {

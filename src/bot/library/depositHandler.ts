@@ -70,6 +70,7 @@ export const depositHandler = async (msg: any) => {
           };
           const newText =
             `Please deposit to the following address and input the TxId.\n\n` +
+            `MiniAmount: ${config.minimumDepositAmount}` +
             `<code>${user.publicKey}</code>`;
           bot.sendMessage(msg.chat.id, newText, { parse_mode: "HTML" });
         }
