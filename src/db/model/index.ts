@@ -3,8 +3,8 @@ const Schema = mongoose.Schema;
 
 const AdminSettingSchema = new Schema({
   userId: { type: Number, required: true },
-  fee: { type: Number, required: true },
   miniAmount: { type: Number, required: true },
+  lastUpdated: { type: Date, default: Date.now },
 });
 
 const AdminListSchema = new Schema({
@@ -17,6 +17,7 @@ const UserListSchema = new Schema({
   userName: { type: String, required: true },
   permission: { type: Boolean, default: false },
   fee: { type: Number, required: true },
+  lastUpdated: { type: Date, default: Date.now },
 });
 
 const SwapSchema = new Schema({

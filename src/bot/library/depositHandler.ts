@@ -1,13 +1,11 @@
 import { bot } from "../index";
 import { removeAnswerCallback } from "./index";
 import walletController from "../../controller/wallet";
-import adminSetting from "../../controller/adminSetting";
 import tokenController from "../../controller/tokenSetting";
 import userList from "../../controller/userList";
 import config from "../../config.json";
 import { Connection, PublicKey } from "@solana/web3.js";
 import depositController from "../../controller/deposit";
-const bs58 = require("bs58");
 
 const connection = new Connection(config.rpcUrl);
 
@@ -58,11 +56,9 @@ export const depositHandler = async (msg: any) => {
             }
           );
         } else {
-          const result = await adminSetting.find();
           userData = await userList.findOne({ userId: msg.chat.id });
-          depositData = result?.result as Array<TdepositData>;
 
-          if (depositData?.length <= 0 || !userData?.permission) {
+          if (!userData?.permission) {
             bot.sendMessage(
               msg.chat.id,
               `You have not been Whitelisted please contact Admin.`
@@ -74,7 +70,6 @@ export const depositHandler = async (msg: any) => {
           };
           const newText =
             `Please deposit to the following address and input the TxId.\n\n` +
-            `<b>MiniAmount: </b> ${depositData[0].miniAmount}  SOL\n` +
             `<code>${user.publicKey}</code>`;
           bot.sendMessage(msg.chat.id, newText, { parse_mode: "HTML" });
         }

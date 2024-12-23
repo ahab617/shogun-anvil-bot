@@ -155,7 +155,6 @@ const transferSplToken = async (
   amount: number
 ) => {
   try {
-    console.log(privatekey, tokenAddr, dis, amount);
     const fromWallet = (await getKeyPairFromPrivatekey(privatekey)) as any;
     const destPublicKey = new PublicKey(dis);
     const mintPublicKey = new PublicKey(tokenAddr);
@@ -167,14 +166,12 @@ const transferSplToken = async (
       mintPublicKey,
       fromWallet.publicKey
     );
-    console.log("senderTokenAccount:", senderTokenAccount);
     const receiverTokenAccount = await getOrCreateAssociatedTokenAccount(
       connection,
       fromWallet,
       mintPublicKey,
       destPublicKey
     );
-    console.log("receiverTokenAccount: ", receiverTokenAccount);
     const tx = await transfer(
       connection,
       fromWallet,

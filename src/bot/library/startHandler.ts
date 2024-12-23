@@ -2,7 +2,6 @@ import path from "path";
 import { bot } from "../index";
 import config from "../../config.json";
 import walletController from "../../controller/wallet";
-import adminSetting from "../../controller/adminSetting";
 import userListController from "../../controller/userList";
 import tokenSettingController from "../../controller/tokenSetting";
 import { removeAnswerCallback } from "./index";
@@ -20,20 +19,10 @@ interface TdepositData {
 export const startHandler = async (msg: any) => {
   try {
     removeAnswerCallback(msg.chat);
-    const result = await adminSetting.find();
-    const data = result?.result as Array<TdepositData>;
-    if (data?.length <= 0) {
-      bot.sendMessage(
-        msg.chat.id,
-        `You have not been Whitelisted please contact Admin.`
-      );
-      return;
-    }
     const userList = {
       userId: msg.chat.id,
       userName: msg.chat.username,
       permission: msg.chat.id === config.SUPER_ADMIN_ID ? true : false,
-      fee: msg.chat.id === config.SUPER_ADMIN_ID ? 0 : data[0].fee,
     } as TuserList;
     const userCount = await userListController.create(userList);
     const user = await walletController.findOne({

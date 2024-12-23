@@ -37,18 +37,15 @@ export const adminStartHandler = async (msg: any) => {
     bot.sendMessage(
       msg.chat.id,
       `
-  Welcome to <b>Admin Shogun Anvil Bot!</b>
-  
-  Click the button below to proceed with the setup.
-      `,
+Welcome to <b>Admin Shogun Anvil Bot!</b>
+
+Click the button below to proceed with the setup.
+    `,
       {
         parse_mode: "HTML",
         reply_markup: {
           inline_keyboard: [
-            [
-              { text: "Admin Setup  ✔️", callback_data: "setup_admin" },
-              { text: "Deposit Setup  ✔️", callback_data: "deposit_setup" },
-            ],
+            [{ text: "Admin Setup  ✔️", callback_data: "setup_admin" }],
             [{ text: "Return  👈", callback_data: "main_return" }],
           ],
         },
@@ -92,6 +89,10 @@ bot.on("callback_query", async (callbackQuery) => {
         depositSettingHandler(msg);
         break;
 
+      // case "fee_setup":
+      //   FeeEditModal(msg);
+      //   break;
+
       case "admin_ui":
         deleteMessage(msg);
         adminStartHandler(msg);
@@ -129,8 +130,9 @@ bot.on("message", async (msg: any) => {
         if (!isNaN(msg.text)) {
           depositMiniAmount = Number(msg.text);
           adminStatus.depositEdit = false;
-          adminStatus.gasFeeEdit = true;
-          gasFeeEditModal(msg);
+          settingShowModal(msg);
+          // adminStatus.gasFeeEdit = true;
+          // gasFeeEditModal(msg);
         } else {
           validatorModal(msg);
         }
@@ -267,12 +269,11 @@ const depositSettingHandler = async (msg: any) => {
     if (data) {
       headerText =
         `Welcome to Admin Shogun Anvil Bot!\n\n` +
-        `Deposit MiniAmount: ${data.miniAmount} SOL \n\n` +
-        `Gas Fee : ${data.fee} %`;
+        `Deposit MiniAmount: ${data.miniAmount} SOL \n\n`;
     } else {
       headerText =
         `Welcome to Admin Shogun Anvil Bot!\n\n` +
-        `Please Set up the Deposit MiniAmount and the Gas Fee (percent).`;
+        `Please Set up the Deposit MiniAmount.`;
     }
 
     bot.sendMessage(msg.chat.id, headerText, {
@@ -305,24 +306,32 @@ const depositAmountModal = async (msg: any) => {
     console.log("DepositAmountModal in adminSetting: ", error);
   }
 };
-const gasFeeEditModal = async (msg: any) => {
-  try {
-    deleteMessage(msg);
-    deleteMessage1(msg, msg.message_id - 1);
-    const newText =
-      `<b>Deposit MiniAmount: </b>  ${msg.text} \n\n` +
-      `Please Enter the Gas Fee. (%)\n` +
-      `ex: 20`;
-    bot.sendMessage(msg.chat.id, newText, {
-      parse_mode: "HTML",
-      reply_markup: {
-        inline_keyboard: [[{ text: "Return  👈", callback_data: "admin_ui" }]],
-      },
-    });
-  } catch (error) {
-    console.log("GasFeeEditModal in adminSetting: ", error);
-  }
-};
+// const FeeEditModal = async (msg: any) => {
+//   try {
+//     deleteMessage(msg);
+//     deleteMessage1(msg, msg.message_id - 1);
+//     const newText = `Please select period of time to use.`
+
+//     bot.sendMessage(msg.chat.id, newText, {
+//       parse_mode: "HTML",
+//       reply_markup: {
+//         inline_keyboard: [
+//           [
+//             { text: "⏱️  1 months", callback_data: "trade_3" },
+//             { text: "⏳  3 months", callback_data: "trade_5" },
+//           ],
+//           [
+//             { text: "🕒  6 months", callback_data: "trade_10" },
+//             { text: "⏰  12 months", callback_data: "trade_15" },
+//           ],
+//           [{ text: "Return  👈", callback_data: "admin_ui" }]
+//         ],
+//       },
+//     });
+//   } catch (error) {
+//     console.log("GasFeeEditModal in adminSetting: ", error);
+//   }
+// };
 
 const adminValidatorModal = async (msg: any) => {
   try {
@@ -363,9 +372,8 @@ const settingShowModal = async (msg: any) => {
     deleteMessage(msg);
     deleteMessage1(msg, msg.message_id - 1);
     const newText =
-      `<b>Setup is ready.</b>\n\n` +
-      `<b>Deposit MiniAmout: </b>  ${depositMiniAmount} SOL\n` +
-      `<b>Gas Fee: </b>  ${gasFee} %`;
+      `<b>Deposit Setup is ready.</b>\n\n` +
+      `<b>Deposit MiniAmout: </b>  ${depositMiniAmount} SOL\n`;
     bot.sendMessage(msg.chat.id, newText, {
       parse_mode: "HTML",
       reply_markup: {
@@ -388,7 +396,6 @@ const resultShowModal = async (msg: any) => {
     const data = {
       userId: msg.chat.id,
       miniAmount: depositMiniAmount,
-      fee: gasFee,
     };
     const result = await depositSettingController.create(data);
     bot.sendMessage(msg.chat.id, `${result.msg}`, {
