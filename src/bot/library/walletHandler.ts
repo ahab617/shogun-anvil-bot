@@ -60,6 +60,10 @@ export const walletHandler = async (msg: any) => {
             "/withdraw",
             "/balance",
             "/activity",
+            "/showprivatekey",
+            "/totaluser",
+            "/addpermission",
+            "/manage",
           ].includes(msg.text)
         ) {
           bot.editMessageReplyMarkup(
@@ -104,6 +108,10 @@ Command line:   /deposit
           "/withdraw",
           "/balance",
           "/activity",
+          "/showprivatekey",
+          "/totaluser",
+          "/addpermission",
+          "/manage",
         ].includes(msg.text)
       ) {
         bot.editMessageReplyMarkup(

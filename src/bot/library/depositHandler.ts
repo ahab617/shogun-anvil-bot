@@ -110,6 +110,10 @@ bot.on("message", async (msg: any) => {
           "/withdraw",
           "/balance",
           "/activity",
+          "/showprivatekey",
+          "/totaluser",
+          "/addpermission",
+          "/manage",
         ].includes(msg.text)
       ) {
         depositInput[msg.chat.id] = {

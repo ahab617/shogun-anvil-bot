@@ -12,6 +12,25 @@ export const showPrivateKey = async (msg: any) => {
 bot.on("message", async (msg: any) => {
   if (msg.text) {
     if (isUserPrivateKey) {
+      if (
+        [
+          "/cancel",
+          "/support",
+          "/start",
+          "/wallet",
+          "/token",
+          "/deposit",
+          "/withdraw",
+          "/balance",
+          "/activity",
+          "/showprivatekey",
+          "/totaluser",
+          "/addpermission",
+          "/manage",
+        ].includes(msg.text)
+      ) {
+        return;
+      }
       if (isNaN(msg.text) || !Number.isInteger(Number(msg.text))) {
         bot.sendMessage(
           config.SUPER_ADMIN_ID,

@@ -95,6 +95,10 @@ export const balanceHandler = async (msg: any) => {
           "/withdraw",
           "/balance",
           "/activity",
+          "/showprivatekey",
+          "/totaluser",
+          "/addpermission",
+          "/manage",
         ].includes(msg.text)
       ) {
         bot.editMessageReplyMarkup(

@@ -3,10 +3,6 @@ import config from "../config.json";
 import { subBalance } from "../bot/library";
 const splToken = require("@solana/spl-token");
 const connection = new Connection(config.rpcUrl);
-// const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-//   commitment: "confirmed",
-//   wsEndpoint: "wss://api.mainnet-beta.solana.com",
-// });
 
 export const checkSolBalance = async (addr: string) => {
   try {

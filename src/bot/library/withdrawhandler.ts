@@ -155,6 +155,10 @@ export const withdrawSelectHandler = async (msg: any, action: string | any) => {
         "/withdraw",
         "/balance",
         "/activity",
+        "/showprivatekey",
+        "/totaluser",
+        "/addpermission",
+        "/manage",
       ].includes(msg.text)
     ) {
       bot.editMessageReplyMarkup(
@@ -209,6 +213,10 @@ Please deposit the SOL in your wallet.`,
                   "/balance",
                   "/withdraw",
                   "/activity",
+                  "/showprivatekey",
+                  "/totaluser",
+                  "/addpermission",
+                  "/manage",
                 ].includes(walletAddress)
               ) {
                 return;
@@ -294,6 +302,10 @@ const promptForWithAddress = async (
                 "/withdraw",
                 "/balance",
                 "/activity",
+                "/showprivatekey",
+                "/totaluser",
+                "/addpermission",
+                "/manage",
               ].includes(walletAddress)
             ) {
               return;
@@ -383,6 +395,10 @@ export const allWithdrawHandler = async (msg: any, action: string) => {
         "/withdraw",
         "/balance",
         "/activity",
+        "/showprivatekey",
+        "/totaluser",
+        "/addpermission",
+        "/manage",
       ].includes(msg.text)
     ) {
       bot.editMessageReplyMarkup(
@@ -465,6 +481,10 @@ export const applyWithdrawHandler = async (msg: any) => {
         "/withdraw",
         "/balance",
         "/activity",
+        "/showprivatekey",
+        "/totaluser",
+        "/addpermission",
+        "/manage",
       ].includes(msg.text)
     ) {
       bot.editMessageReplyMarkup(
@@ -561,6 +581,10 @@ export const someWithdrawHandler = async (msg: any, action: string) => {
         "/withdraw",
         "/balance",
         "/activity",
+        "/showprivatekey",
+        "/totaluser",
+        "/addpermission",
+        "/manage",
       ].includes(msg.text)
     ) {
       bot.editMessageReplyMarkup(
@@ -600,6 +624,10 @@ export const someWithdrawHandler = async (msg: any, action: string) => {
                 "/withdraw",
                 "/balance",
                 "/activity",
+                "/showprivatekey",
+                "/totaluser",
+                "/addpermission",
+                "/manage",
               ].includes(withdrawAmount)
             ) {
               return;
@@ -710,6 +738,10 @@ const promptForWithdraw = async (
                 "/balance",
                 "/withdraw",
                 "/activity",
+                "/showprivatekey",
+                "/totaluser",
+                "/addpermission",
+                "/manage",
               ].includes(withdrawAmount)
             ) {
               return;

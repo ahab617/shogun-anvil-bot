@@ -11,9 +11,7 @@ import {
 } from "@solana/web3.js";
 import crypto from "crypto";
 import * as Web3 from "@solana/web3.js";
-import { bot } from "../bot";
 import config from "../config.json";
-import withdrawController from "../controller/withdraw";
 import { getOrCreateAssociatedTokenAccount, transfer } from "@solana/spl-token";
 
 const ALGORITHM = "aes-256-gcm";
@@ -21,10 +19,6 @@ const ENCRYPTION_KEY = config.salt;
 const IV_LENGTH = 12;
 
 const connection = new Connection(config.rpcUrl);
-// const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-//   commitment: "confirmed",
-//   wsEndpoint: "wss://api.mainnet-beta.solana.com",
-// });
 
 export let isDepositStatus = {} as any;
 

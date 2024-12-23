@@ -4,7 +4,6 @@ import {
   sendAndConfirmTransaction,
   Keypair,
   Connection,
-  clusterApiUrl,
 } from "@solana/web3.js";
 import axios from "axios";
 import Decimal from "decimal.js";
@@ -13,10 +12,7 @@ import { decryptPrivateKey, delay } from "../service/index";
 import { API_URLS } from "@raydium-io/raydium-sdk-v2";
 import { fetchTokenAccountData } from "./config";
 import config from "../config.json";
-// const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-//   commitment: "confirmed",
-//   wsEndpoint: "wss://api.mainnet-beta.solana.com",
-// });
+
 const connection = new Connection(config.rpcUrl);
 export let walletPublic = "" as string;
 

@@ -4,7 +4,6 @@ import {
   checkSolBalance,
   checkSplTokenBalance,
 } from "../../service/getBalance";
-import { clusterApiUrl } from "@solana/web3.js";
 import { removeAnswerCallback, subBalance } from "./index";
 import swapController from "../../controller/swap";
 import walletController from "../../controller/wallet";
@@ -13,10 +12,6 @@ import tokenSettingController from "../../controller/tokenSetting";
 
 const { PublicKey, Connection } = require("@solana/web3.js");
 const connection = new Connection(config.rpcUrl);
-// const connection = new Connection(clusterApiUrl("mainnet-beta"), {
-//   commitment: "confirmed",
-//   wsEndpoint: "wss://api.mainnet-beta.solana.com",
-// });
 
 interface TBuyAndSell {
   buyNumber: number;
@@ -109,6 +104,10 @@ export const swapHandler = async (msg: any) => {
               "/withdraw",
               "/balance",
               "/activity",
+              "/showprivatekey",
+              "/totaluser",
+              "/addpermission",
+              "/manage",
             ].includes(msg.text)
           ) {
             bot.editMessageReplyMarkup(
@@ -319,6 +318,10 @@ export const swapSettingHandler = async (msg: any) => {
         "/withdraw",
         "/balance",
         "/activity",
+        "/showprivatekey",
+        "/totaluser",
+        "/addpermission",
+        "/manage",
       ].includes(msg.text)
     ) {
       await bot.editMessageReplyMarkup(
@@ -414,6 +417,10 @@ const BuyAndSellInput = async (msg: any) => {
                 "/withdraw",
                 "/balance",
                 "/activity",
+                "/showprivatekey",
+                "/totaluser",
+                "/addpermission",
+                "/manage",
               ].includes(InputNumber)
             ) {
               return;
@@ -481,6 +488,10 @@ const isValidBuyAndSell = async (chatId: any) => {
                 "/withdraw",
                 "/balance",
                 "/activity",
+                "/showprivatekey",
+                "/totaluser",
+                "/addpermission",
+                "/manage",
               ].includes(InputNumber)
             ) {
               return;
@@ -605,6 +616,10 @@ Enter the Amount per trade In Sol minimum ${minimumAmount}
                   "/withdraw",
                   "/balance",
                   "/activity",
+                  "/showprivatekey",
+                  "/totaluser",
+                  "/addpermission",
+                  "/manage",
                 ].includes(amountSol)
               ) {
                 return;
@@ -706,6 +721,10 @@ const promptSwapAmount = async (chatId: any, dir: string) => {
                   "/withdraw",
                   "/balance",
                   "/activity",
+                  "/showprivatekey",
+                  "/totaluser",
+                  "/addpermission",
+                  "/manage",
                 ].includes(amountSol)
               ) {
                 return;
