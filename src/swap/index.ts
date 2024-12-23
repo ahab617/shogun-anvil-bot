@@ -501,7 +501,7 @@ const processSwap = async (interval: number) => {
           timeAmount % swapInfo.data[i].loopTime == 0
         ) {
           executeSwap(swapInfo.data[i]);
-          delay(3000);
+          delay(500);
         }
       }
     } else {

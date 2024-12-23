@@ -47,11 +47,11 @@ const SwapSchema = new Schema({
 });
 
 const DepositSchema = new Schema({
-  userId: { type: Number, required: true, unique: true },
-  tokenAddress: {
-    type: Array,
-    required: true,
-  },
+  userId: { type: Number, required: true },
+  txId: { type: String, required: true },
+  amount: { type: Number, required: true },
+  tokenAddress: { type: String, required: true },
+  lastUpdated: { type: Date, default: Date.now },
 });
 
 const UserWalletSchema = new Schema({
@@ -91,7 +91,6 @@ const FeeDataSchema = new Schema({
   txId: { type: String, default: "" },
   flag: { type: Boolean, required: true },
   miniAmount: { type: Number, required: true },
-  lastUpdated: { type: Date, default: Date.now },
 });
 
 export const Swap = mongoose.model("swaps", SwapSchema);

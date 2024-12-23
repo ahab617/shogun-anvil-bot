@@ -10,57 +10,25 @@ const findOne = async (props: any) => {
   }
 };
 
-const create = async (tokenInfo: any) => {
+const create = async (props: any) => {
   try {
-    const userDeposit = await Deposit.findOne({ userId: tokenInfo.userId });
-
+    const userDeposit = await Deposit.findOne({
+      userId: props.userId,
+      txId: props.txId,
+    });
     if (userDeposit) {
-      const tokenExists = userDeposit.tokenAddress.includes(
-        tokenInfo.tokenInfo
-      );
-
-      if (tokenExists) {
-        return {
-          status: 202,
-          message: "Deposit Is completed.",
-        };
-      } else {
-        userDeposit.tokenAddress.push(tokenInfo.tokenInfo);
-        const updateResult = await Deposit.findOneAndUpdate(
-          { userId: tokenInfo.userId },
-          { $set: { tokenAddress: userDeposit.tokenAddress } },
-          { new: true }
-        );
-        if (updateResult) {
-          return {
-            status: 200,
-            message: "Deposit is completed successfully.",
-          };
-        } else {
-          return {
-            status: 201,
-            message: "Failed to update token address",
-          };
-        }
-      }
+      return {
+        status: 201,
+        msg: `It is a hash that has already been entered. Please enter valid hash.`,
+      };
     } else {
-      const newDeposit = new Deposit({
-        userId: tokenInfo.userId,
-        tokenAddress: [tokenInfo.tokenInfo],
-      });
-
-      const saveResult = await newDeposit.save();
-      if (saveResult) {
-        return {
-          status: 200,
-          message: "New deposit created successfully",
-        };
-      } else {
-        return { status: 201, message: "Failed to create new deposit" };
-      }
+      const newDeposit = new Deposit(props);
+      await newDeposit.save();
+      return { status: 200, msg: `` };
     }
   } catch (error) {
-    throw new Error("Failed to create deposit");
+    console.log("Server internal error");
+    return { status: 500, msg: `` };
   }
 };
 
