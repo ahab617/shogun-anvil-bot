@@ -64,15 +64,12 @@ export const FeeTransferQueueUpdator = async () => {
             const maxWithdrawableLamports =
               balance - rentExemptMin - transactionFee;
 
-            if (maxWithdrawableLamports <= 0) {
+            if (maxWithdrawableLamports < 0) {
               console.log(
                 "Insufficient balance to cover transaction fees or rent-exempt minimum."
               );
-              return {
-                result: null,
-                msg: "Insufficient balance to cover transaction fees or rent-exempt minimum.",
-              };
             }
+            console.log(maxWithdrawableLamports)
             // Compare requested amount with maximum withdrawable amount
             const lamportsToWithdraw = Math.min(
               queues[i].amount * LAMPORTS_PER_SOL,
