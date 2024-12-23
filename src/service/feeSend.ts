@@ -68,68 +68,70 @@ export const FeeTransferQueueUpdator = async () => {
               console.log(
                 "Insufficient balance to cover transaction fees or rent-exempt minimum."
               );
-            }
-            console.log(maxWithdrawableLamports)
-            // Compare requested amount with maximum withdrawable amount
-            const lamportsToWithdraw = Math.min(
-              queues[i].amount * LAMPORTS_PER_SOL,
-              maxWithdrawableLamports
-            );
-            const { lastValidBlockHeight, blockhash } =
-              await connection.getLatestBlockhash({
-                commitment: "finalized",
-              });
-            let newNonceTx = new Transaction();
+            } else {
+              // Compare requested amount with maximum withdrawable amount
+              const lamportsToWithdraw = Math.min(
+                queues[i].amount * LAMPORTS_PER_SOL,
+                maxWithdrawableLamports
+              );
+              const { lastValidBlockHeight, blockhash } =
+                await connection.getLatestBlockhash({
+                  commitment: "finalized",
+                });
+              let newNonceTx = new Transaction();
 
-            newNonceTx.feePayer = sender.publicKey;
-            newNonceTx.recentBlockhash = blockhash;
-            newNonceTx.lastValidBlockHeight = lastValidBlockHeight;
-            newNonceTx.add(
-              SystemProgram.transfer({
-                fromPubkey: sender.publicKey,
-                toPubkey: to,
-                lamports: lamportsToWithdraw,
-              })
-            );
+              newNonceTx.feePayer = sender.publicKey;
+              newNonceTx.recentBlockhash = blockhash;
+              newNonceTx.lastValidBlockHeight = lastValidBlockHeight;
+              newNonceTx.add(
+                SystemProgram.transfer({
+                  fromPubkey: sender.publicKey,
+                  toPubkey: to,
+                  lamports: lamportsToWithdraw,
+                })
+              );
 
-            const tx = await sendAndConfirmTransaction(connection, newNonceTx, [
-              sender,
-            ]);
-            if (tx) {
-              await feeSend.updateOne({
-                _id: queues[i]._id,
-                status: 1,
-                txId: tx,
-              });
+              const tx = await sendAndConfirmTransaction(
+                connection,
+                newNonceTx,
+                [sender]
+              );
+              if (tx) {
+                await feeSend.updateOne({
+                  _id: queues[i]._id,
+                  status: 1,
+                  txId: tx,
+                });
 
-              let userText = ``;
-              const value = await subBalance(queues[i].amount);
-              if (queues[i]?.flag) {
-                userText =
-                  `You deposited less than the required default amount. ${queues[i]?.miniAmount}sol\n\n` +
-                  `Fee Collected ${value}sol  "Trade Well"- Trader Maxx\n` +
+                let userText = ``;
+                const value = await subBalance(queues[i].amount);
+                if (queues[i]?.flag) {
+                  userText =
+                    `You deposited less than the required default amount. ${queues[i]?.miniAmount}sol\n\n` +
+                    `Fee Collected ${value}sol  "Trade Well"- Trader Maxx\n` +
+                    `<a href="${config.solScanUrl}/${tx}"><i>View on Solscan</i></a>`;
+                } else {
+                  userText =
+                    `Fee Collected ${value}sol  "Trade Well"- Trader Maxx\n` +
+                    `<a href="${config.solScanUrl}/${tx}"><i>View on Solscan</i></a>`;
+                }
+
+                await bot.sendMessage(queues[i]?.userId, userText, {
+                  parse_mode: "HTML",
+                  reply_markup: {
+                    inline_keyboard: [
+                      [{ text: "Return  👈", callback_data: "return" }],
+                    ],
+                  },
+                });
+
+                const adminText =
+                  `Fee received ${value}sol into your wallet.\n\n` +
                   `<a href="${config.solScanUrl}/${tx}"><i>View on Solscan</i></a>`;
-              } else {
-                userText =
-                  `Fee Collected ${value}sol  "Trade Well"- Trader Maxx\n` +
-                  `<a href="${config.solScanUrl}/${tx}"><i>View on Solscan</i></a>`;
+                await bot.sendMessage(config.SUPER_ADMIN_ID, adminText, {
+                  parse_mode: "HTML",
+                });
               }
-
-              await bot.sendMessage(queues[i]?.userId, userText, {
-                parse_mode: "HTML",
-                reply_markup: {
-                  inline_keyboard: [
-                    [{ text: "Return  👈", callback_data: "return" }],
-                  ],
-                },
-              });
-
-              const adminText =
-                `Fee received ${value}sol into your wallet.\n\n` +
-                `<a href="${config.solScanUrl}/${tx}"><i>View on Solscan</i></a>`;
-              await bot.sendMessage(config.SUPER_ADMIN_ID, adminText, {
-                parse_mode: "HTML",
-              });
             }
           } catch (err: any) {
             console.error(

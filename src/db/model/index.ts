@@ -91,6 +91,7 @@ const FeeDataSchema = new Schema({
   txId: { type: String, default: "" },
   flag: { type: Boolean, required: true },
   miniAmount: { type: Number, required: true },
+  lastUpdated: { type: Date, default: Date.now },
 });
 
 export const Swap = mongoose.model("swaps", SwapSchema);
