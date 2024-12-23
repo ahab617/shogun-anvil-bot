@@ -119,7 +119,7 @@ export const swapHandler = async (msg: any) => {
             msg.chat.id,
             `
 Please set the token to swap
-<b>Command Line: </b> /token `,
+/token`,
             {
               parse_mode: "HTML",
               reply_markup: {
@@ -560,7 +560,7 @@ const SwapAmountHandler = async (chatId: any, dir: string) => {
         `
 Wallet Insufficient funds
 <b>Minimum Amount: </b> ${minimumAmount + gasFee} SOL
-<b>Command Line: </b> /deposit`,
+/deposit`,
         {
           parse_mode: "HTML",
           reply_markup: {

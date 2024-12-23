@@ -9,7 +9,7 @@ const findOne = async (props: any) => {
       return {
         status: 404,
         message: ` Swap Information not found.\n
-<b>Command Line: </b> /activity`,
+/activity`,
       };
     }
   } catch (error) {

@@ -524,7 +524,7 @@ const inputTokenCheck = async (
     `
 You have not the ${Symbol} token amount enough.
 <b>Required Minimum ${Symbol} Amount: </b> ${miniAmount}
-Command Line:  /deposit
+/deposit
 `,
     { parse_mode: "HTML" }
   );

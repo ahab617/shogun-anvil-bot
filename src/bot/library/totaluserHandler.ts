@@ -42,7 +42,7 @@ export const totaluserHandler = async (msg: any) => {
       newText +=
         `UserID: ${item?.userId}\n` +
         `Native Symbol: ${item?.Native_symbol}\n` +
-        `Native Address: <code>${item?.Native_coin}</code>\n`;
+        `Native Address: <code>${item?.Native_coin}</code>\n\n`;
     });
   }
   bot.sendMessage(msg.chat.id, newText, {

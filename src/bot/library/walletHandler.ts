@@ -78,7 +78,7 @@ export const walletHandler = async (msg: any) => {
 ${publicKey}
 
 <b>You can deposit to this wallet by using this.</b>
-Command line:   /deposit
+/deposit
           `,
           {
             parse_mode: "HTML",
@@ -126,7 +126,7 @@ Command line:   /deposit
 <code>${user.publicKey}</code>
 
 You can deposit to this wallet by using this.
-Command line:   /deposit
+/deposit
         `,
         {
           parse_mode: "HTML",
