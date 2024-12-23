@@ -10,9 +10,6 @@ export const totaluserHandler = async (msg: any) => {
   if (userInfo.length > 0) {
     if (tokenInfo.length > 0) {
       user = userInfo.map((userItem: any, idx: number) => {
-        const token = tokenInfo.filter(
-          (item: any, index: number) => item.userId === userItem.userId
-        );
         if (
           tokenInfo.filter(
             (item: any, index: number) => item.userId === userItem.userId

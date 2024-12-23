@@ -16,7 +16,6 @@ const UserListSchema = new Schema({
   userId: { type: Number, required: true },
   userName: { type: String, required: true },
   permission: { type: Boolean, default: false },
-  fee: { type: Number, required: true },
   lastUpdated: { type: Date, default: Date.now },
 });
 

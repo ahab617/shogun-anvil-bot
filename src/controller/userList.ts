@@ -18,7 +18,8 @@ const create = async (data: any) => {
 
 const findOne = async (data: any) => {
   try {
-    const result = await UserList.findOne({ userId: data.userId });
+    const { filter } = data;
+    const result = await UserList.findOne(filter);
     return result;
   } catch (error) {
     throw new Error(`Failed to find userList`);
@@ -37,7 +38,7 @@ const updateOne = async (data: any) => {
   try {
     const result = await UserList.findOne({ userId: data.userId });
     if (result) {
-      const r = await UserList.updateOne({ userId: data.userId }, data);
+      const r = await UserList.updateOne(data);
       if (r) {
         return { msg: `Permission added successfully` };
       } else {
